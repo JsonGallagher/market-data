@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import { formatValue } from '$lib/validation';
 
@@ -14,22 +14,21 @@
 		title,
 		color = '#d4a853',
 		expandable = true,
-		labelTarget = 8
+		yAxisLabel = ''
 	}: {
 		data: DataPoint[];
 		metricTypeId: string;
 		title: string;
 		color?: string;
 		expandable?: boolean;
-		labelTarget?: number;
+		yAxisLabel?: string;
 	} = $props();
 
-	let chartContainer = $state<HTMLElement | null>(null);
-	let modalChartContainer = $state<HTMLElement | null>(null);
+	let chartContainer: HTMLElement | undefined = $state();
+	let modalChartContainer: HTMLElement | undefined = $state();
 	let isOpen = $state(false);
-	let chart: { destroy?: () => void } | null = null;
-	let modalChart: { destroy?: () => void } | null = null;
-	let isAnimating = $state(false);
+	let chartInstance: any = null;
+	let modalChartInstance: any = null;
 	let displayRange = $state<{ start: string; end: string } | null>(null);
 
 	// Computed values for stats
@@ -40,8 +39,27 @@
 		return ((latestValue - previousValue) / previousValue) * 100;
 	});
 
-	async function renderChart(container: HTMLElement, height: number) {
-		const { Chart } = await import('frappe-charts');
+	// Format Y-axis values based on metric type
+	function formatYAxis(value: number): string {
+		if (metricTypeId === 'median_price' || metricTypeId === 'average_price') {
+			if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+			if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
+			return `$${value.toFixed(0)}`;
+		}
+		if (metricTypeId === 'price_per_sqft') {
+			return `$${value.toFixed(0)}`;
+		}
+		if (metricTypeId === 'list_to_sale_ratio') {
+			return `${(value * 100).toFixed(0)}%`;
+		}
+		if (metricTypeId === 'months_of_supply') {
+			return `${value.toFixed(1)}`;
+		}
+		if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+		return value.toFixed(0);
+	}
+
+	function getChartOptions(height: number) {
 		const sortedData = [...data].sort(
 			(a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
 		);
@@ -55,158 +73,165 @@
 			};
 		}
 
-		const totalYears = startDate && endDate ? new Date(endDate).getFullYear() - new Date(startDate).getFullYear() : 0;
-		const dataPoints = sortedData.length;
+		const seriesData = sortedData.map((d) => ({
+			x: new Date(`${d.date}T12:00:00`).getTime(),
+			y: d.value
+		}));
 
-		const fullLabels = sortedData.map((d) =>
-			new Date(`${d.date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-		);
-
-		const useYearOnly = totalYears >= 10;
-
-		const axisLabels = sortedData.map((d) =>
-			new Date(`${d.date}T12:00:00`).toLocaleDateString(
-				'en-US',
-				useYearOnly ? { year: 'numeric' } : { month: 'short', year: '2-digit' }
-			)
-		);
-
-		const values = sortedData.map((d) => d.value);
-
-		const stride = Math.max(1, Math.ceil(dataPoints / labelTarget));
-
-		const displayLabels = axisLabels.map((label, idx) => {
-			if (idx === 0 || idx === dataPoints - 1) return label;
-			if (idx % stride === 0) return label;
-			return '';
-		});
-
-		const labelToFullMap = new Map<string, string[]>();
-		axisLabels.forEach((label, idx) => {
-			if (!labelToFullMap.has(label)) {
-				labelToFullMap.set(label, []);
-			}
-			labelToFullMap.get(label)!.push(fullLabels[idx]);
-		});
-
-		return new Chart(container, {
-			title: '',
-			data: {
-				labels: displayLabels,
-				datasets: [
-					{
-						name: title,
-						values
-					}
-				]
+		return {
+			series: [{
+				name: title,
+				data: seriesData
+			}],
+			chart: {
+				type: 'area' as const,
+				height,
+				background: 'transparent',
+				fontFamily: 'DM Sans, sans-serif',
+				toolbar: { show: false },
+				zoom: { enabled: false },
+				animations: {
+					enabled: true,
+					easing: 'easeinout' as const,
+					speed: 400
+				}
 			},
-			type: 'line',
-			height,
 			colors: [color],
-			lineOptions: {
-				regionFill: 1,
-				hideDots: 1,
-				dotSize: 0,
-				spline: 0
+			fill: {
+				type: 'gradient' as const,
+				gradient: {
+					shadeIntensity: 1,
+					opacityFrom: 0.4,
+					opacityTo: 0.05,
+					stops: [0, 90, 100]
+				}
 			},
-			axisOptions: {
-				xAxisMode: 'tick',
-				xIsSeries: true
+			stroke: {
+				curve: 'smooth' as const,
+				width: 2.5
 			},
-			tooltipOptions: {
-				formatTooltipY: (d: number) => formatValue(metricTypeId, d),
-				formatTooltipX: (label: string, idx: number) => {
-					if (idx !== undefined && idx !== null && fullLabels[idx]) {
-						return fullLabels[idx];
+			dataLabels: { enabled: false },
+			markers: { size: 0 },
+			grid: {
+				borderColor: '#1f1f1f',
+				strokeDashArray: 3,
+				xaxis: { lines: { show: false } },
+				yaxis: { lines: { show: true } },
+				padding: { left: 10, right: 10 }
+			},
+			xaxis: {
+				type: 'datetime' as const,
+				labels: {
+					style: {
+						colors: '#888888',
+						fontSize: '11px',
+						fontWeight: 500
+					},
+					datetimeFormatter: {
+						year: 'yyyy',
+						month: "MMM 'yy",
+						day: 'dd MMM'
 					}
-					if (label && label.trim()) {
-						const matches = labelToFullMap.get(label);
-						if (matches && matches.length === 1) {
-							return matches[0];
-						}
+				},
+				axisBorder: { show: false },
+				axisTicks: { show: false }
+			},
+			yaxis: {
+				labels: {
+					style: {
+						colors: '#888888',
+						fontSize: '11px',
+						fontWeight: 500
+					},
+					formatter: formatYAxis
+				},
+				axisBorder: { show: false },
+				axisTicks: { show: false },
+				title: yAxisLabel ? {
+					text: yAxisLabel,
+					style: {
+						color: '#686868',
+						fontSize: '11px',
+						fontWeight: 600
 					}
-					return label || 'Date unavailable';
+				} : undefined
+			},
+			tooltip: {
+				theme: 'dark' as const,
+				x: {
+					format: 'MMM yyyy'
+				},
+				y: {
+					formatter: (val: number) => formatValue(metricTypeId, val)
 				}
 			}
-		});
+		};
 	}
 
-	onMount(() => {
-		if (data.length === 0 || !chartContainer) return;
+	async function initChart(container: HTMLElement, height: number) {
+		if (!browser) return null;
 
-		renderChart(chartContainer, 220).then((instance) => {
-			chart = instance;
-		});
+		const ApexCharts = (await import('apexcharts')).default;
+		const options = getChartOptions(height);
+		const chart = new ApexCharts(container, options);
+		await chart.render();
+		return chart;
+	}
+
+	onMount(async () => {
+		if (!browser || data.length === 0 || !chartContainer) return;
+
+		await tick();
+		chartInstance = await initChart(chartContainer, 200);
 
 		return () => {
-			if (chart && typeof chart.destroy === 'function') {
-				chart.destroy();
+			if (chartInstance) {
+				chartInstance.destroy();
+				chartInstance = null;
 			}
 		};
 	});
 
-	$effect(() => {
-		if (!isOpen || !modalChartContainer || data.length === 0) return;
-		let active = true;
-		isAnimating = true;
-		renderChart(modalChartContainer, 400).then((instance) => {
-			if (!active) {
-				if (instance && typeof instance.destroy === 'function') instance.destroy();
-				return;
-			}
-			modalChart = instance;
-		});
+	async function openModal() {
+		isOpen = true;
+		await tick();
 
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				isOpen = false;
-			}
-		};
-		window.addEventListener('keydown', onKeyDown);
+		if (modalChartContainer && !modalChartInstance) {
+			modalChartInstance = await initChart(modalChartContainer, 380);
+		}
+	}
 
-		return () => {
-			active = false;
-			window.removeEventListener('keydown', onKeyDown);
-			if (modalChart && typeof modalChart.destroy === 'function') {
-				modalChart.destroy();
-			}
-		};
-	});
+	function closeModal() {
+		isOpen = false;
+		if (modalChartInstance) {
+			modalChartInstance.destroy();
+			modalChartInstance = null;
+		}
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape' && isOpen) {
+			closeModal();
+		}
+	}
 
 	async function downloadChart() {
-		if (!modalChartContainer) return;
-		const svg = modalChartContainer.querySelector('svg');
-		if (!svg) return;
-		const serializer = new XMLSerializer();
-		const svgString = serializer.serializeToString(svg);
-		const canvas = document.createElement('canvas');
-		const rect = svg.getBoundingClientRect();
-		canvas.width = rect.width * 2;
-		canvas.height = rect.height * 2;
-		const ctx = canvas.getContext('2d');
-		if (!ctx) return;
-		const img = new Image();
-		const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-		const url = URL.createObjectURL(blob);
-		img.onload = () => {
-			ctx.scale(2, 2);
-			ctx.drawImage(img, 0, 0);
-			URL.revokeObjectURL(url);
-			const pngUrl = canvas.toDataURL('image/png');
-			const link = document.createElement('a');
-			link.href = pngUrl;
-			link.download = `${title.toLowerCase().replace(/\s+/g, '-')}.png`;
-			link.click();
-		};
-		img.src = url;
+		if (!modalChartInstance) return;
+		const { imgURI } = await modalChartInstance.dataURI();
+		const link = document.createElement('a');
+		link.href = imgURI;
+		link.download = `${title.toLowerCase().replace(/\s+/g, '-')}.png`;
+		link.click();
 	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="chart-card group">
 	<!-- Header -->
 	<div class="flex items-start justify-between p-5 pb-0">
 		<div class="flex-1">
-			<h3 class="text-xs font-medium tracking-wide text-[#606060] uppercase mb-1">{title}</h3>
+			<h3 class="text-[13px] font-semibold tracking-wide text-[#909090] uppercase mb-1">{title}</h3>
 			{#if latestValue !== null}
 				<div class="flex items-baseline gap-3">
 					<span class="text-xl font-medium text-[#fafafa] tracking-tight">
@@ -234,8 +259,8 @@
 		{#if expandable}
 			<button
 				type="button"
-				class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-[10px] font-medium tracking-wider text-[#505050] hover:text-[#d4a853] uppercase flex items-center gap-1.5"
-				onclick={() => (isOpen = true)}
+				class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-[11px] font-semibold tracking-wider text-[#707070] hover:text-[#d4a853] uppercase flex items-center gap-1.5"
+				onclick={openModal}
 			>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
@@ -247,25 +272,25 @@
 
 	<!-- Chart Area -->
 	{#if data.length === 0}
-		<div class="h-[220px] flex items-center justify-center text-[#404040] text-sm">
+		<div class="h-[200px] flex items-center justify-center text-[#404040] text-sm">
 			No data available
 		</div>
 	{:else}
 		<button
 			type="button"
-			class="w-full text-left px-3"
+			class="w-full text-left px-2 cursor-pointer"
 			aria-label={`Expand ${title} chart`}
 			disabled={!expandable}
-			onclick={() => expandable && (isOpen = true)}
+			onclick={openModal}
 		>
-			<div bind:this={chartContainer} class="chart-container"></div>
+			<div bind:this={chartContainer} class="w-full"></div>
 		</button>
 	{/if}
 
 	<!-- Footer with date range -->
 	{#if displayRange}
 		<div class="px-5 pb-4 pt-0">
-			<p class="text-[10px] text-[#404040] tracking-wide">
+			<p class="text-[11px] text-[#707070] tracking-wide">
 				{displayRange.start} — {displayRange.end}
 			</p>
 		</div>
@@ -273,25 +298,20 @@
 </div>
 
 <!-- Expanded Modal -->
-{#if expandable && isOpen}
+{#if isOpen}
 	<div
 		class="modal-overlay"
 		role="dialog"
 		aria-modal="true"
-		style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;"
 	>
-		<!-- Backdrop -->
 		<button
 			type="button"
-			class="modal-backdrop animate-fade-in"
+			class="modal-backdrop"
 			aria-label="Close chart"
-			onclick={() => (isOpen = false)}
-			style="position: fixed; top: 0; left: 0; right: 0; bottom: 0;"
+			onclick={closeModal}
 		></button>
 
-		<!-- Modal Content -->
-		<div class={`modal-content ${isAnimating ? 'animate-modal-in' : ''}`}>
-			<!-- Header -->
+		<div class="modal-content">
 			<div class="flex items-center justify-between p-6 border-b border-[#1f1f1f]">
 				<div>
 					<h3 class="text-lg text-[#fafafa] font-medium">{title}</h3>
@@ -314,7 +334,7 @@
 					<button
 						type="button"
 						class="flex items-center gap-1.5 text-[10px] font-medium tracking-wider text-[#505050] hover:text-[#fafafa] transition-colors uppercase"
-						onclick={() => (isOpen = false)}
+						onclick={closeModal}
 					>
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -324,12 +344,10 @@
 				</div>
 			</div>
 
-			<!-- Chart -->
-			<div class="p-6" bind:this={modalChartContainer}>
-				<div class="chart-container"></div>
+			<div class="p-6">
+				<div bind:this={modalChartContainer} class="w-full"></div>
 			</div>
 
-			<!-- Stats Footer -->
 			{#if latestValue !== null}
 				<div class="px-6 pb-6 flex items-center gap-8">
 					<div>
@@ -361,7 +379,7 @@
 	.modal-overlay {
 		position: fixed;
 		inset: 0;
-		z-index: 50;
+		z-index: 9999;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -373,6 +391,7 @@
 		inset: 0;
 		background-color: rgba(0, 0, 0, 0.85);
 		backdrop-filter: blur(8px);
+		animation: fadeIn 200ms ease-out;
 	}
 
 	.modal-content {
@@ -383,6 +402,7 @@
 		width: min(1000px, 94vw);
 		max-height: 90vh;
 		overflow: hidden;
+		animation: modalIn 250ms cubic-bezier(0.16, 1, 0.3, 1);
 	}
 
 	.modal-content::before {
@@ -393,14 +413,6 @@
 		right: 0;
 		height: 1px;
 		background: linear-gradient(90deg, transparent, rgba(212, 168, 83, 0.3), transparent);
-	}
-
-	.animate-modal-in {
-		animation: modalIn 250ms cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	.animate-fade-in {
-		animation: fadeIn 200ms ease-out;
 	}
 
 	@keyframes modalIn {
@@ -415,11 +427,7 @@
 	}
 
 	@keyframes fadeIn {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
+		from { opacity: 0; }
+		to { opacity: 1; }
 	}
 </style>

@@ -70,6 +70,18 @@
 		'list_to_sale_ratio'
 	];
 
+	// Axis labels for each metric type
+	const axisLabels: Record<string, { y: string; x: string }> = {
+		median_price: { y: 'Price ($)', x: 'Date' },
+		average_price: { y: 'Price ($)', x: 'Date' },
+		price_per_sqft: { y: '$/Sq Ft', x: 'Date' },
+		active_listings: { y: 'Listings', x: 'Date' },
+		sales_count: { y: 'Sales', x: 'Date' },
+		days_on_market: { y: 'Days', x: 'Date' },
+		months_of_supply: { y: 'Months', x: 'Date' },
+		list_to_sale_ratio: { y: 'Ratio (%)', x: 'Date' }
+	};
+
 	const hasData = $derived(data.metrics.length > 0);
 
 	const metricsByDate = $derived(() => {
@@ -318,17 +330,17 @@
 				<h1 class="text-[#fafafa] max-w-2xl mb-4">
 					Precision insights for high-performing agents.
 				</h1>
-				<p class="text-[#686868] text-base max-w-xl mb-6 leading-relaxed">
+				<p class="text-[#888888] text-base max-w-xl mb-6 leading-relaxed">
 					Beautiful, client-ready analytics showing pricing, inventory, and momentum in a single view.
 				</p>
 				<div class="flex flex-wrap items-center gap-4 text-xs">
-					<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#686868]">
+					<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#888888]">
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 						</svg>
 						{monthCount()} months
 					</span>
-					<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#686868]">
+					<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#888888]">
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
 						</svg>
@@ -374,7 +386,7 @@
 				<div class="lux-card p-6 mb-10">
 					<div class="flex items-center justify-between mb-5">
 						<h2 class="text-xl text-[#fafafa]">Key Insights</h2>
-						<span class="text-[10px] text-[#505050] uppercase tracking-wider">as of {latestLabel()}</span>
+						<span class="text-[11px] text-[#808080] uppercase tracking-wider">as of {latestLabel()}</span>
 					</div>
 					<div class="grid md:grid-cols-2 gap-3">
 						{#each insights() as insight, i}
@@ -400,7 +412,7 @@
 								data={chartData[typeId]}
 								metricTypeId={typeId}
 								title={getDisplayName(typeId)}
-								labelTarget={10}
+								yAxisLabel={axisLabels[typeId]?.y || ''}
 							/>
 						{/if}
 					{/each}
@@ -411,7 +423,7 @@
 			<div class="lux-card p-6 mb-10">
 				<div class="mb-6">
 					<h2 class="text-xl text-[#fafafa] mb-2">Market Intelligence</h2>
-					<p class="text-[#606060] text-sm">
+					<p class="text-[#909090] text-sm">
 						Layered analysis to help explain the story behind the numbers.
 					</p>
 				</div>
@@ -424,7 +436,7 @@
 							{ name: 'Average', values: seriesFor('average_price'), color: '#5b8def' }
 						]}
 						tooltipFormatter={(value) => formatValue('average_price', value)}
-						labelTarget={10}
+						yAxisLabel="Price ($)"
 					/>
 					<MultiTrendChart
 						title="Sales vs Active Inventory"
@@ -433,7 +445,7 @@
 							{ name: 'Active Listings', values: seriesFor('active_listings'), color: '#a78bfa' }
 						]}
 						tooltipFormatter={(value) => formatValue('active_listings', value)}
-						labelTarget={10}
+						yAxisLabel="Count"
 					/>
 				</div>
 
@@ -443,11 +455,12 @@
 						metricTypeId="months_of_supply"
 						title="Months of Supply"
 						color="#d4a853"
+						yAxisLabel="Months"
 					/>
 					<div class="chart-card p-5">
-						<h3 class="text-xs font-medium tracking-wide text-[#606060] uppercase mb-4">Agent Talking Points</h3>
+						<h3 class="text-[13px] font-semibold tracking-wide text-[#909090] uppercase mb-4">Agent Talking Points</h3>
 						{#if insights().length === 0}
-							<p class="text-[#505050] text-sm">Upload more history to unlock insights.</p>
+							<p class="text-[#808080] text-sm">Upload more history to unlock insights.</p>
 						{:else}
 							<ul class="space-y-3">
 								{#each insights() as insight}
@@ -472,7 +485,7 @@
 					</div>
 					<div>
 						<h2 class="text-lg text-[#fafafa]">Share Your Dashboard</h2>
-						<p class="text-xs text-[#505050]">Generate shareable links for your clients</p>
+						<p class="text-xs text-[#808080]">Generate shareable links for your clients</p>
 					</div>
 				</div>
 
@@ -487,8 +500,8 @@
 						{#each data.sharedLinks as link}
 							<div class="flex items-center justify-between p-4 bg-[#111111] border border-[#1f1f1f] rounded-xl group hover:border-[#282828] transition-colors">
 								<div class="flex-1 min-w-0 mr-4">
-									<code class="text-xs text-[#808080] block truncate font-mono">{origin ? `${origin}/share/${link.token}` : `/share/${link.token}`}</code>
-									<p class="text-[10px] text-[#404040] mt-1">
+									<code class="text-xs text-[#909090] block truncate font-mono">{origin ? `${origin}/share/${link.token}` : `/share/${link.token}`}</code>
+									<p class="text-[11px] text-[#707070] mt-1">
 										Created {new Date(link.created_at).toLocaleDateString()}
 									</p>
 								</div>
@@ -505,7 +518,7 @@
 										<button
 											type="submit"
 											aria-label="Delete shareable link"
-											class="p-2 text-[#404040] hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/5"
+											class="p-2 text-[#606060] hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/5"
 										>
 											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -537,7 +550,7 @@
 					</button>
 				</form>
 
-				<p class="text-[10px] text-[#404040] mt-4">
+				<p class="text-[11px] text-[#707070] mt-4">
 					Anyone with the link can view your dashboard. Links don't expire.
 				</p>
 			</div>
@@ -552,9 +565,9 @@
 					<div class="w-7 h-7 rounded-md bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center">
 						<span class="text-[#0a0a0a] text-[10px] font-bold">MD</span>
 					</div>
-					<span class="text-[#505050] text-xs">Market Data</span>
+					<span class="text-[#808080] text-xs">Market Data</span>
 				</div>
-				<p class="text-[#404040] text-xs">
+				<p class="text-[#707070] text-xs">
 					© {new Date().getFullYear()} Market Data. All rights reserved.
 				</p>
 			</div>
