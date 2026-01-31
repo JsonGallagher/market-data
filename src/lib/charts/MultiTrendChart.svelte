@@ -30,9 +30,12 @@
 	let chartContainer: HTMLElement | undefined = $state();
 	let modalChartContainer: HTMLElement | undefined = $state();
 	let isOpen = $state(false);
-	let chartInstance: any = null;
-	let modalChartInstance: any = null;
+	let chartInstance = $state<any>(null);
+	let modalChartInstance = $state<any>(null);
 	let displayRange = $state<{ start: string; end: string } | null>(null);
+
+	// Track series data for reactivity
+	const seriesData = $derived(series.map(s => s.values));
 
 	const defaultColors = ['#d4a853', '#5b8def', '#34d399', '#a78bfa'];
 
@@ -185,6 +188,16 @@
 				chartInstance = null;
 			}
 		};
+	});
+
+	// Update chart when series data changes
+	$effect(() => {
+		// Track seriesData to detect changes
+		const currentData = seriesData;
+		if (!browser || !chartInstance || currentData.length === 0) return;
+
+		const options = getChartOptions(210);
+		chartInstance.updateOptions(options, true, true);
 	});
 
 	async function openModal() {

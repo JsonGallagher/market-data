@@ -27,17 +27,28 @@
 	let chartContainer: HTMLElement | undefined = $state();
 	let modalChartContainer: HTMLElement | undefined = $state();
 	let isOpen = $state(false);
-	let chartInstance: any = null;
-	let modalChartInstance: any = null;
+	let chartInstance = $state<any>(null);
+	let modalChartInstance = $state<any>(null);
 	let displayRange = $state<{ start: string; end: string } | null>(null);
 
-	// Computed values for stats
-	const latestValue = $derived(data.length > 0 ? data[data.length - 1]?.value : null);
-	const previousValue = $derived(data.length > 1 ? data[data.length - 2]?.value : null);
-	const percentChange = $derived(() => {
-		if (latestValue === null || previousValue === null) return null;
-		return ((latestValue - previousValue) / previousValue) * 100;
+	// Computed values for stats - compute all in one derived to avoid reactivity chain issues
+	const chartStats = $derived.by(() => {
+		const sorted = [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+		const latest = sorted.length > 0 ? sorted[sorted.length - 1]?.value : null;
+		// Use first data point in range for period-over-period comparison
+		const first = sorted.length > 1 ? sorted[0]?.value : null;
+		let change: number | null = null;
+		if (latest !== null && first !== null) {
+			change = ((latest - first) / first) * 100;
+		}
+		return { sorted, latest, first, change };
 	});
+
+	// Convenience accessors
+	const sortedData = $derived(chartStats.sorted);
+	const latestValue = $derived(chartStats.latest);
+	const firstValue = $derived(chartStats.first);
+	const percentChange = $derived(chartStats.change);
 
 	// Format Y-axis values based on metric type
 	function formatYAxis(value: number): string {
@@ -192,6 +203,16 @@
 		};
 	});
 
+	// Update chart when data changes
+	$effect(() => {
+		// Track sortedData to detect data changes
+		const currentData = sortedData;
+		if (!browser || !chartInstance || currentData.length === 0) return;
+
+		const options = getChartOptions(200);
+		chartInstance.updateOptions(options, true, true);
+	});
+
 	async function openModal() {
 		isOpen = true;
 		await tick();
@@ -237,11 +258,10 @@
 					<span class="text-xl font-medium text-[#fafafa] tracking-tight">
 						{formatValue(metricTypeId, latestValue)}
 					</span>
-					{#if percentChange() !== null}
-						{@const change = percentChange()}
+					{#if percentChange !== null}
 						<span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full
-							{change !== null && change >= 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-red-400 bg-red-400/10'}">
-							{#if change !== null && change >= 0}
+							{percentChange >= 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-red-400 bg-red-400/10'}">
+							{#if percentChange >= 0}
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
 								</svg>
@@ -250,7 +270,7 @@
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
 								</svg>
 							{/if}
-							{change !== null ? Math.abs(change).toFixed(1) : 0}%
+							{Math.abs(percentChange).toFixed(1)}%
 						</span>
 					{/if}
 				</div>
@@ -354,18 +374,17 @@
 						<p class="text-[10px] text-[#505050] uppercase tracking-wider mb-1">Current</p>
 						<p class="text-lg text-[#fafafa] font-medium">{formatValue(metricTypeId, latestValue)}</p>
 					</div>
-					{#if previousValue !== null}
+					{#if firstValue !== null}
 						<div>
-							<p class="text-[10px] text-[#505050] uppercase tracking-wider mb-1">Previous</p>
-							<p class="text-lg text-[#707070]">{formatValue(metricTypeId, previousValue)}</p>
+							<p class="text-[10px] text-[#505050] uppercase tracking-wider mb-1">Start of Period</p>
+							<p class="text-lg text-[#707070]">{formatValue(metricTypeId, firstValue)}</p>
 						</div>
 					{/if}
-					{#if percentChange() !== null}
-						{@const change = percentChange()}
+					{#if percentChange !== null}
 						<div>
 							<p class="text-[10px] text-[#505050] uppercase tracking-wider mb-1">Change</p>
-							<p class="text-lg font-medium {change !== null && change >= 0 ? 'text-emerald-400' : 'text-red-400'}">
-								{change !== null && change >= 0 ? '+' : ''}{change?.toFixed(1)}%
+							<p class="text-lg font-medium {percentChange >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+								{percentChange >= 0 ? '+' : ''}{percentChange.toFixed(1)}%
 							</p>
 						</div>
 					{/if}

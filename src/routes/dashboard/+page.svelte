@@ -14,11 +14,11 @@
 	type DateRange = '6m' | '12m' | '24m' | 'all';
 	const STORAGE_KEY = 'market-data-date-range';
 
-	const filterOptions: { value: DateRange; label: string }[] = [
-		{ value: '6m', label: 'Last 6 months' },
-		{ value: '12m', label: 'Last 12 months' },
-		{ value: '24m', label: 'Last 2 years' },
-		{ value: 'all', label: 'All time' }
+	const filterOptions: { value: DateRange; label: string; changeLabel: string }[] = [
+		{ value: '6m', label: 'Last 6 months', changeLabel: '6mo' },
+		{ value: '12m', label: 'Last 12 months', changeLabel: 'YoY' },
+		{ value: '24m', label: 'Last 2 years', changeLabel: '2yr' },
+		{ value: 'all', label: 'All time', changeLabel: 'total' }
 	];
 
 	// Use derived to track server data, state for UI updates
@@ -71,7 +71,7 @@
 	}
 
 	// Group metrics by type
-	const metricsByType = $derived(() => {
+	const metricsByType = $derived.by(() => {
 		const grouped: Record<string, Array<{ date: string; value: number }>> = {};
 
 		for (const metric of data.metrics) {
@@ -93,10 +93,10 @@
 	});
 
 	// Get latest and previous values for each metric type
-	const latestValues = $derived(() => {
+	const latestValues = $derived.by(() => {
 		const latest: Record<string, { current: number | null; previous: number | null }> = {};
 
-		for (const [typeId, values] of Object.entries(metricsByType())) {
+		for (const [typeId, values] of Object.entries(metricsByType)) {
 			const sorted = [...values].sort(
 				(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
 			);
@@ -145,7 +145,7 @@
 
 	const hasData = $derived(data.metrics.length > 0);
 
-	const metricsByDate = $derived(() => {
+	const metricsByDate = $derived.by(() => {
 		const map: Record<string, Record<string, number>> = {};
 		for (const metric of data.metrics) {
 			if (!map[metric.recorded_date]) {
@@ -156,21 +156,21 @@
 		return map;
 	});
 
-	const sortedDates = $derived(() =>
-		Object.keys(metricsByDate()).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+	const sortedDates = $derived(
+		Object.keys(metricsByDate).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
 	);
 
-	const monthCount = $derived(() => sortedDates().length);
+	const monthCount = $derived(sortedDates.length);
 
-	const timeline = $derived(() =>
-		sortedDates().map((date) => ({
+	const timeline = $derived(
+		sortedDates.map((date) => ({
 			date,
-			...metricsByDate()[date]
+			...metricsByDate[date]
 		})) as Array<{ date: string } & Record<string, number>>
 	);
 
 	function seriesFor(metricTypeId: string) {
-		return timeline()
+		return timeline
 			.filter((point) => typeof point[metricTypeId] === 'number')
 			.map((point) => ({ date: point.date, value: point[metricTypeId] as number }));
 	}
@@ -181,32 +181,32 @@
 		return date.toISOString().split('T')[0];
 	}
 
-	const latestDate = $derived(() => {
+	const latestDate = $derived.by(() => {
 		const dates = data.metrics
 			.map((metric) => metric.recorded_date)
 			.filter(Boolean)
 			.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 		return dates[dates.length - 1] ?? null;
 	});
-	const latestLabel = $derived(() => {
-		const dateStr = latestDate();
+	const latestLabel = $derived.by(() => {
+		const dateStr = latestDate;
 		if (!dateStr) return '—';
 		return new Date(`${dateStr}T12:00:00`).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 	});
 
 	function latestValue(metricTypeId: string) {
-		const date = latestDate();
+		const date = latestDate;
 		if (!date) return null;
-		return metricsByDate()[date]?.[metricTypeId] ?? null;
+		return metricsByDate[date]?.[metricTypeId] ?? null;
 	}
 
 	function valueAt(metricTypeId: string, dateStr: string | null) {
 		if (!dateStr) return null;
-		return metricsByDate()[dateStr]?.[metricTypeId] ?? null;
+		return metricsByDate[dateStr]?.[metricTypeId] ?? null;
 	}
 
-	const monthsOfSupplySeries = $derived(() =>
-		timeline()
+	const monthsOfSupplySeries = $derived(
+		timeline
 			.filter((point) => typeof point.active_listings === 'number' && typeof point.sales_count === 'number')
 			.map((point) => ({
 				date: point.date,
@@ -214,9 +214,9 @@
 			}))
 	);
 
-	const seasonalitySales = $derived(() => {
+	const seasonalitySales = $derived.by(() => {
 		const buckets: Record<string, { total: number; count: number }> = {};
-		for (const point of timeline()) {
+		for (const point of timeline) {
 			if (typeof point.sales_count !== 'number') continue;
 			const month = new Date(point.date).toLocaleDateString('en-US', { month: 'short' });
 			if (!buckets[month]) {
@@ -231,12 +231,12 @@
 		}));
 	});
 
-	const insights = $derived(() => {
+	const insights = $derived.by(() => {
 		const items: string[] = [];
-		const latest = latestDate();
+		const latest = latestDate;
 		if (!latest) return items;
 
-		const priorMonth = sortedDates()[sortedDates().length - 2] ?? null;
+		const priorMonth = sortedDates[sortedDates.length - 2] ?? null;
 		const priorYear = shiftYear(latest, -1);
 
 		const median = latestValue('median_price');
@@ -280,8 +280,8 @@
 			);
 		}
 
-		if (seasonalitySales().length > 3) {
-			const sorted = [...seasonalitySales()].sort((a, b) => b.value - a.value);
+		if (seasonalitySales.length > 3) {
+			const sorted = [...seasonalitySales].sort((a, b) => b.value - a.value);
 			items.push(
 				`Seasonality: strongest months are ${sorted[0]?.month} and ${sorted[1]?.month}, slowest is ${sorted[sorted.length - 1]?.month}.`
 			);
@@ -290,10 +290,18 @@
 		return items;
 	});
 
-	const pulseItems = $derived(() => {
-		const latest = latestDate();
-		if (!latest) return [];
-		const priorYear = shiftYear(latest, -1);
+	// Get earliest date in the filtered range
+	const earliestDate = $derived(sortedDates.length > 0 ? sortedDates[0] : null);
+
+	// Get change label for the current date range
+	const changeLabel = $derived(
+		filterOptions.find((opt) => opt.value === dateRange)?.changeLabel ?? 'change'
+	);
+
+	const pulseItems = $derived.by(() => {
+		const latest = latestDate;
+		const earliest = earliestDate;
+		if (!latest || !earliest) return [];
 		const items = [
 			{ id: 'median_price', label: 'Median Price' },
 			{ id: 'average_price', label: 'Average Price' },
@@ -303,7 +311,7 @@
 
 		return items.map((item) => {
 			const current = latestValue(item.id);
-			const prior = valueAt(item.id, priorYear);
+			const prior = valueAt(item.id, earliest);
 			const change = current !== null && prior !== null ? calculatePercentChange(current, prior) : null;
 			return { ...item, current, change };
 		});
@@ -439,7 +447,7 @@
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 						</svg>
-						{monthCount()} months
+						{monthCount} months
 					</span>
 					<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#888888]">
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -451,7 +459,7 @@
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 						</svg>
-						Data through {latestLabel()}
+						Data through {latestLabel}
 					</span>
 					{#if data.lastImport}
 						<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#888888]">
@@ -466,7 +474,7 @@
 
 			<!-- Key Metrics Grid -->
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-10">
-				{#each pulseItems() as item, i}
+				{#each pulseItems as item, i}
 					<div class="stat-card animate-fade-in-up" style="animation-delay: {i * 75}ms; opacity: 0;">
 						<p class="stat-label">{item.label}</p>
 						<p class="stat-value">
@@ -483,7 +491,7 @@
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
 									</svg>
 								{/if}
-								{Math.abs(item.change).toFixed(1)}% YoY
+								{Math.abs(item.change).toFixed(1)}% {changeLabel}
 							</span>
 						{/if}
 					</div>
@@ -491,14 +499,14 @@
 			</div>
 
 			<!-- Key Insights -->
-			{#if insights().length > 0}
+			{#if insights.length > 0}
 				<div class="lux-card p-6 mb-10">
 					<div class="flex items-center justify-between mb-5">
 						<h2 class="text-xl text-[#fafafa]">Key Insights</h2>
-						<span class="text-[11px] text-[#808080] uppercase tracking-wider">as of {latestLabel()}</span>
+						<span class="text-[11px] text-[#808080] uppercase tracking-wider">as of {latestLabel}</span>
 					</div>
 					<div class="grid md:grid-cols-2 gap-3">
-						{#each insights() as insight, i}
+						{#each insights as insight, i}
 							<div class="insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
 								<p class="text-[#a0a0a0] text-sm leading-relaxed">{insight}</p>
 							</div>
@@ -515,10 +523,9 @@
 				</div>
 				<div class="grid md:grid-cols-2 gap-4">
 					{#each metricOrder as typeId}
-						{@const chartData = metricsByType()}
-						{#if chartData[typeId] && chartData[typeId].length > 0}
+						{#if metricsByType[typeId] && metricsByType[typeId].length > 0}
 							<TrendChart
-								data={chartData[typeId]}
+								data={metricsByType[typeId]}
 								metricTypeId={typeId}
 								title={getDisplayName(typeId)}
 								yAxisLabel={axisLabels[typeId]?.y || ''}
@@ -560,7 +567,7 @@
 
 				<div class="grid lg:grid-cols-2 gap-4">
 					<TrendChart
-						data={monthsOfSupplySeries()}
+						data={monthsOfSupplySeries}
 						metricTypeId="months_of_supply"
 						title="Months of Supply"
 						color="#d4a853"
@@ -568,11 +575,11 @@
 					/>
 					<div class="chart-card p-5">
 						<h3 class="text-[13px] font-semibold tracking-wide text-[#909090] uppercase mb-4">Agent Talking Points</h3>
-						{#if insights().length === 0}
+						{#if insights.length === 0}
 							<p class="text-[#808080] text-sm">Upload more history to unlock insights.</p>
 						{:else}
 							<ul class="space-y-3">
-								{#each insights() as insight}
+								{#each insights as insight}
 									<li class="flex items-start gap-3">
 										<span class="mt-2 h-1.5 w-1.5 rounded-full bg-[#d4a853] flex-shrink-0"></span>
 										<span class="text-[#909090] text-sm leading-relaxed">{insight}</span>
