@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
 	import TrendChart from '$lib/charts/TrendChart.svelte';
 	import MultiTrendChart from '$lib/charts/MultiTrendChart.svelte';
 	import MetricCard from '$lib/charts/MetricCard.svelte';
@@ -8,6 +9,47 @@
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	// Date range filter
+	type DateRange = '6m' | '12m' | '24m' | 'all';
+	const STORAGE_KEY = 'market-data-date-range';
+
+	const filterOptions: { value: DateRange; label: string }[] = [
+		{ value: '6m', label: 'Last 6 months' },
+		{ value: '12m', label: 'Last 12 months' },
+		{ value: '24m', label: 'Last 2 years' },
+		{ value: 'all', label: 'All time' }
+	];
+
+	// Use derived to track server data, state for UI updates
+	const serverRange = $derived(data.range as DateRange);
+	let dateRange = $state<DateRange>('12m');
+
+	// Sync with server data and localStorage
+	$effect(() => {
+		// Initialize from server data
+		dateRange = serverRange;
+
+		// Check localStorage for saved preference (only if no URL param)
+		if (browser) {
+			const urlParams = new URLSearchParams(window.location.search);
+			if (!urlParams.has('range')) {
+				const saved = localStorage.getItem(STORAGE_KEY);
+				if (saved && ['6m', '12m', '24m', 'all'].includes(saved)) {
+					dateRange = saved as DateRange;
+					goto(`?range=${saved}`, { replaceState: true, noScroll: true });
+				}
+			}
+		}
+	});
+
+	function handleRangeChange(newRange: DateRange) {
+		dateRange = newRange;
+		if (browser) {
+			localStorage.setItem(STORAGE_KEY, newRange);
+		}
+		goto(`?range=${newRange}`, { replaceState: true, noScroll: true });
+	}
 
 	// Group metrics by type
 	const metricsByType = $derived(() => {
@@ -254,7 +296,8 @@
 
 	function copyToClipboard(token: string) {
 		if (!browser) return;
-		const url = `${origin}/share/${token}`;
+		// Include current date range in shared link
+		const url = `${origin}/share/${token}?range=${dateRange}`;
 		navigator.clipboard.writeText(url);
 		copiedLink = token;
 		setTimeout(() => {
@@ -311,14 +354,33 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
 					</svg>
 				</div>
-				<h1 class="text-3xl text-[#fafafa] mb-4">No data yet</h1>
-				<p class="text-[#707070] mb-10 text-base leading-relaxed">
-					Upload your first MLS report or enter data manually to start tracking market trends.
-				</p>
-				<div class="flex gap-3 justify-center">
-					<a href="/upload" class="btn-primary">Upload File</a>
-					<a href="/manual-entry" class="btn-secondary">Manual Entry</a>
-				</div>
+				{#if dateRange !== 'all'}
+					<!-- No data in selected range -->
+					<h1 class="text-3xl text-[#fafafa] mb-4">No data for this period</h1>
+					<p class="text-[#707070] mb-10 text-base leading-relaxed">
+						There's no data in the selected time range. Try expanding to a longer period or viewing all time.
+					</p>
+					<div class="flex gap-3 justify-center">
+						<button
+							type="button"
+							class="btn-primary"
+							onclick={() => handleRangeChange('all')}
+						>
+							View All Time
+						</button>
+						<a href="/upload" class="btn-secondary">Upload More Data</a>
+					</div>
+				{:else}
+					<!-- No data at all -->
+					<h1 class="text-3xl text-[#fafafa] mb-4">No data yet</h1>
+					<p class="text-[#707070] mb-10 text-base leading-relaxed">
+						Upload your first MLS report or enter data manually to start tracking market trends.
+					</p>
+					<div class="flex gap-3 justify-center">
+						<a href="/upload" class="btn-primary">Upload File</a>
+						<a href="/manual-entry" class="btn-secondary">Manual Entry</a>
+					</div>
+				{/if}
 			</div>
 		{:else}
 			<!-- Hero Section -->
@@ -333,6 +395,26 @@
 				<p class="text-[#888888] text-base max-w-xl mb-6 leading-relaxed">
 					Beautiful, client-ready analytics showing pricing, inventory, and momentum in a single view.
 				</p>
+
+				<!-- Date Range Filter -->
+				<div class="flex flex-wrap items-center gap-4 mb-6">
+					<span class="text-xs text-[#707070] uppercase tracking-wider">Showing</span>
+					<div class="flex items-center gap-1 bg-[#111111] border border-[#1f1f1f] rounded-lg p-1">
+						{#each filterOptions as opt}
+							<button
+								type="button"
+								class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200
+									{dateRange === opt.value
+										? 'bg-[#d4a853] text-[#0a0a0a]'
+										: 'text-[#808080] hover:text-[#fafafa] hover:bg-[#1a1a1a]'}"
+								onclick={() => handleRangeChange(opt.value)}
+							>
+								{opt.label}
+							</button>
+						{/each}
+					</div>
+				</div>
+
 				<div class="flex flex-wrap items-center gap-4 text-xs">
 					<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#888888]">
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
