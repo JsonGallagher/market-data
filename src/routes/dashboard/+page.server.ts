@@ -67,12 +67,22 @@ export const load: PageServerLoad = async ({ url, locals: { supabaseAdmin } }) =
 		console.error('Failed to fetch shared links:', linksError);
 	}
 
+	// Fetch last import timestamp
+	const { data: lastImport } = await supabaseAdmin
+		.from('import_sources')
+		.select('last_imported_at, source_name')
+		.eq('user_id', PRIVATE_SINGLE_USER_ID)
+		.order('last_imported_at', { ascending: false })
+		.limit(1)
+		.single();
+
 	return {
 		user: null,
 		metrics: metrics ?? [],
 		metricTypes: metricTypes ?? [],
 		sharedLinks: sharedLinks ?? [],
-		range
+		range,
+		lastImport: lastImport ?? null
 	};
 };
 

@@ -100,6 +100,41 @@ export type Database = {
 					created_at?: string;
 				};
 			};
+			import_sources: {
+				Row: {
+					id: string;
+					user_id: string;
+					source_type: 'google_sheets' | 'csv' | 'excel' | 'manual';
+					source_url: string | null;
+					source_name: string;
+					sheet_tab: string | null;
+					last_imported_at: string;
+					row_count: number | null;
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					user_id: string;
+					source_type: 'google_sheets' | 'csv' | 'excel' | 'manual';
+					source_url?: string | null;
+					source_name: string;
+					sheet_tab?: string | null;
+					last_imported_at?: string;
+					row_count?: number | null;
+					created_at?: string;
+				};
+				Update: {
+					id?: string;
+					user_id?: string;
+					source_type?: 'google_sheets' | 'csv' | 'excel' | 'manual';
+					source_url?: string | null;
+					source_name?: string;
+					sheet_tab?: string | null;
+					last_imported_at?: string;
+					row_count?: number | null;
+					created_at?: string;
+				};
+			};
 		};
 		Views: {};
 		Functions: {};
@@ -111,3 +146,4 @@ export type MetricType = Database['public']['Tables']['metric_types']['Row'];
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Metric = Database['public']['Tables']['metrics']['Row'];
 export type SharedLink = Database['public']['Tables']['shared_links']['Row'];
+export type ImportSource = Database['public']['Tables']['import_sources']['Row'];

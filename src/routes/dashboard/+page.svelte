@@ -51,6 +51,25 @@
 		goto(`?range=${newRange}`, { replaceState: true, noScroll: true });
 	}
 
+	// Format relative time for last import
+	function formatLastImport(dateStr: string | null): string {
+		if (!dateStr) return 'Never';
+		const date = new Date(dateStr);
+		const now = new Date();
+		const diffMs = now.getTime() - date.getTime();
+		const diffMins = Math.floor(diffMs / 60000);
+		const diffHours = Math.floor(diffMs / 3600000);
+		const diffDays = Math.floor(diffMs / 86400000);
+
+		if (diffMins < 1) return 'Just now';
+		if (diffMins < 60) return `${diffMins}m ago`;
+		if (diffHours < 24) return `${diffHours}h ago`;
+		if (diffDays === 1) return 'Yesterday';
+		if (diffDays < 7) return `${diffDays} days ago`;
+		if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+	}
+
 	// Group metrics by type
 	const metricsByType = $derived(() => {
 		const grouped: Record<string, Array<{ date: string; value: number }>> = {};
@@ -432,8 +451,16 @@
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 						</svg>
-						Updated {latestLabel()}
+						Data through {latestLabel()}
 					</span>
+					{#if data.lastImport}
+						<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#888888]">
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+							</svg>
+							Imported {formatLastImport(data.lastImport.last_imported_at)}
+						</span>
+					{/if}
 				</div>
 			</div>
 

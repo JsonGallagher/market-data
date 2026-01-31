@@ -68,15 +68,15 @@ The current app has solid foundations but needs refinement to become indispensab
 src/lib/extractors/sheets.ts
 ```
 
-- [ ] Auto-detect sheet tabs and let user select which to import
-- [ ] Remember last-used sheet URL per user (convenience)
-- [ ] Better error messages when sheet isn't public
-- [ ] Support for named ranges (e.g., `Sheet1!A1:H50`)
+- [ ] Auto-detect sheet tabs and let user select which to import (deferred - requires API key)
+- [x] Remember last-used sheet URL per user (via import history)
+- [x] Better error messages when sheet isn't public
+- [x] Support for named ranges (e.g., `Sheet1!A1:H50`)
 
 **Acceptance Criteria:**
-- [ ] User can select specific tab from multi-tab spreadsheet
-- [ ] Previously used URLs appear in dropdown for quick re-import
-- [ ] Clear error: "This sheet is private. Make it public via Share → Anyone with link"
+- [ ] User can select specific tab from multi-tab spreadsheet (deferred - use gid param instead)
+- [x] Previously used URLs appear in dropdown for quick re-import
+- [x] Clear error: "This sheet is private. Make it public via Share → Anyone with link"
 
 ### 1.2 Date Range Filtering
 
@@ -110,10 +110,10 @@ src/lib/stores/importHistory.ts
 src/routes/upload/+page.svelte
 ```
 
-- [ ] Store import metadata (source URL, date, row count) in Supabase
-- [ ] "Re-import" button to refresh data from same source
-- [ ] Show last import timestamp on dashboard
-- [ ] Detect and highlight new/changed values on re-import
+- [x] Store import metadata (source URL, date, row count) in Supabase
+- [x] "Re-import" button to refresh data from same source
+- [x] Show last import timestamp on dashboard
+- [ ] Detect and highlight new/changed values on re-import (deferred)
 
 **Database Changes:**
 
@@ -132,9 +132,9 @@ CREATE TABLE import_sources (
 ```
 
 **Acceptance Criteria:**
-- [ ] User sees list of previous imports with timestamps
-- [ ] One-click re-import from saved sources
-- [ ] "Last updated: 2 days ago" shown on dashboard
+- [x] User sees list of previous imports with timestamps
+- [x] One-click re-import from saved sources
+- [x] "Last updated: 2 days ago" shown on dashboard
 
 ---
 

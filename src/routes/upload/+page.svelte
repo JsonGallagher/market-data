@@ -3,9 +3,10 @@
 	import { goto } from '$app/navigation';
 	import { extractFromFile, type ExtractedMetric } from '$lib/extractors/excel';
 	import { formatValue } from '$lib/validation';
-	import type { ActionData } from './$types';
+	import type { ActionData, PageData } from './$types';
+	import type { ImportSource } from '$lib/database.types';
 
-	let { form }: { form: ActionData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let file: File | null = $state(null);
 	let extracting = $state(false);
@@ -18,6 +19,15 @@
 		errors: string[];
 	} | null>(null);
 	let editedMetrics = $state<ExtractedMetric[]>([]);
+
+	// Import source tracking
+	interface ImportSourceInfo {
+		type: 'google_sheets' | 'csv' | 'excel';
+		url: string | null;
+		name: string;
+		sheetTab: string | null;
+	}
+	let importSource = $state<ImportSourceInfo | null>(null);
 	const groupedMetrics = $derived(() => {
 		const groups: Record<string, Record<string, ExtractedMetric>> = {};
 		for (const metric of editedMetrics) {
@@ -93,16 +103,55 @@
 		if (!file) return;
 		const buffer = await file.arrayBuffer();
 		await extractFromBuffer(buffer);
+
+		// Set import source for file uploads
+		if (editedMetrics.length > 0) {
+			const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+			importSource = {
+				type: isExcel ? 'excel' : 'csv',
+				url: null,
+				name: file.name,
+				sheetTab: null
+			};
+		}
 	}
 
-	function buildGoogleSheetExportUrl(url: string) {
+	// Google Sheets URL parsing
+	interface SheetInfo {
+		id: string;
+		gid: string | null;
+		range: string | null;
+	}
+
+	function parseGoogleSheetUrl(url: string): SheetInfo | null {
 		const idMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
 		if (!idMatch) return null;
+
 		const id = idMatch[1];
 		const gidMatch = url.match(/gid=([0-9]+)/);
 		const gid = gidMatch ? gidMatch[1] : null;
-		return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv${gid ? `&gid=${gid}` : ''}`;
+
+		// Support named ranges like Sheet1!A1:H50
+		const rangeMatch = url.match(/range=([^&]+)/);
+		const range = rangeMatch ? decodeURIComponent(rangeMatch[1]) : null;
+
+		return { id, gid, range };
 	}
+
+	function buildGoogleSheetExportUrl(sheetInfo: SheetInfo): string {
+		let exportUrl = `https://docs.google.com/spreadsheets/d/${sheetInfo.id}/export?format=csv`;
+		if (sheetInfo.gid) {
+			exportUrl += `&gid=${sheetInfo.gid}`;
+		}
+		if (sheetInfo.range) {
+			exportUrl += `&range=${encodeURIComponent(sheetInfo.range)}`;
+		}
+		return exportUrl;
+	}
+
+	// Store last successful sheet info for re-import
+	let lastSheetInfo: SheetInfo | null = $state(null);
+	let lastSheetName = $state<string | null>(null);
 
 	async function extractFromGoogleSheet() {
 		if (!sheetUrl.trim()) {
@@ -110,11 +159,13 @@
 			return;
 		}
 
-		const exportUrl = buildGoogleSheetExportUrl(sheetUrl.trim());
-		if (!exportUrl) {
-			sheetError = 'That link does not look like a Google Sheets URL';
+		const sheetInfo = parseGoogleSheetUrl(sheetUrl.trim());
+		if (!sheetInfo) {
+			sheetError = 'Invalid Google Sheets URL. Expected format: https://docs.google.com/spreadsheets/d/SHEET_ID/...';
 			return;
 		}
+
+		const exportUrl = buildGoogleSheetExportUrl(sheetInfo);
 
 		extracting = true;
 		sheetError = null;
@@ -122,11 +173,52 @@
 
 		try {
 			const response = await fetch(exportUrl, { method: 'GET' });
-			if (!response.ok) {
-				throw new Error('Failed to fetch sheet. Make sure sharing is set to "Anyone with the link".');
+
+			if (response.status === 401 || response.status === 403) {
+				throw new Error(
+					'This sheet is private. To fix:\n' +
+					'1. Open the sheet in Google Sheets\n' +
+					'2. Click "Share" in the top right\n' +
+					'3. Click "Change to anyone with the link"\n' +
+					'4. Set permission to "Viewer"\n' +
+					'5. Click "Done" and try again'
+				);
 			}
+
+			if (response.status === 404) {
+				throw new Error('Sheet not found. Check that the URL is correct and the sheet still exists.');
+			}
+
+			if (!response.ok) {
+				throw new Error(`Failed to fetch sheet (HTTP ${response.status}). Make sure the sheet is publicly accessible.`);
+			}
+
+			// Check if we got HTML instead of CSV (indicates auth redirect)
+			const contentType = response.headers.get('content-type') || '';
+			if (contentType.includes('text/html')) {
+				throw new Error(
+					'This sheet is private. Make it public via Share → "Anyone with the link".'
+				);
+			}
+
 			const buffer = await response.arrayBuffer();
 			await extractFromBuffer(buffer);
+
+			// Store for re-import
+			if (editedMetrics.length > 0) {
+				lastSheetInfo = sheetInfo;
+				// Extract sheet name from URL or use default
+				const nameMatch = sheetUrl.match(/spreadsheets\/d\/[^/]+\/([^?#]+)/);
+				lastSheetName = nameMatch ? decodeURIComponent(nameMatch[1]) : 'Google Sheet';
+
+				// Set import source
+				importSource = {
+					type: 'google_sheets',
+					url: sheetUrl.trim(),
+					name: lastSheetName,
+					sheetTab: sheetInfo.gid
+				};
+			}
 		} catch (error) {
 			sheetError = error instanceof Error ? error.message : 'Failed to fetch Google Sheet';
 		} finally {
@@ -149,6 +241,9 @@
 		file = null;
 		extractionResult = null;
 		editedMetrics = [];
+		importSource = null;
+		lastSheetInfo = null;
+		lastSheetName = null;
 	}
 
 	$effect(() => {
@@ -156,6 +251,33 @@
 			window.scrollTo({ top: 0, behavior: 'smooth' });
 		}
 	});
+
+	// Re-import from saved source
+	async function reimportFromSource(source: ImportSource) {
+		if (source.source_type !== 'google_sheets' || !source.source_url) {
+			sheetError = 'Re-import is only available for Google Sheets sources';
+			return;
+		}
+
+		sheetUrl = source.source_url;
+		await extractFromGoogleSheet();
+	}
+
+	// Format relative time
+	function formatRelativeTime(dateStr: string): string {
+		const date = new Date(dateStr);
+		const now = new Date();
+		const diffMs = now.getTime() - date.getTime();
+		const diffMins = Math.floor(diffMs / 60000);
+		const diffHours = Math.floor(diffMs / 3600000);
+		const diffDays = Math.floor(diffMs / 86400000);
+
+		if (diffMins < 1) return 'just now';
+		if (diffMins < 60) return `${diffMins}m ago`;
+		if (diffHours < 24) return `${diffHours}h ago`;
+		if (diffDays < 7) return `${diffDays}d ago`;
+		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+	}
 </script>
 
 <svelte:head>
@@ -211,7 +333,7 @@
 		<!-- Google Sheets Import -->
 		<div class="lux-card p-6 mb-8">
 			<h2 class="text-xl text-white mb-2">Import from Google Sheets</h2>
-			<p class="text-sm text-[#888888] mb-5">
+			<p class="text-sm text-[#888888] mb-4">
 				Paste a public Google Sheets link (share settings: "Anyone with the link can view").
 			</p>
 			<div class="flex flex-col md:flex-row gap-3">
@@ -231,9 +353,63 @@
 				</button>
 			</div>
 			{#if sheetError}
-				<p class="text-sm text-red-400 mt-3">{sheetError}</p>
+				<p class="text-sm text-red-400 mt-3 whitespace-pre-line">{sheetError}</p>
 			{/if}
+			<details class="mt-4">
+				<summary class="text-xs text-[#666666] cursor-pointer hover:text-[#888888]">
+					Tips for importing specific tabs or ranges
+				</summary>
+				<div class="mt-3 text-xs text-[#666666] space-y-2 pl-4 border-l border-[#2a2a2a]">
+					<p><strong class="text-[#888888]">Import a specific tab:</strong> Open the tab in Google Sheets, then copy the URL. It will include <code class="text-[#c9a962]">gid=123456</code> which identifies that tab.</p>
+					<p><strong class="text-[#888888]">Import a range:</strong> Add <code class="text-[#c9a962]">?range=Sheet1!A1:H50</code> to the URL to import only specific cells.</p>
+				</div>
+			</details>
 		</div>
+
+		<!-- Import History -->
+		{#if data.importSources && data.importSources.length > 0 && !extractionResult}
+			<div class="lux-card p-6 mb-8">
+				<h2 class="text-lg text-white mb-4">Recent Imports</h2>
+				<div class="space-y-3">
+					{#each data.importSources as source}
+						<div class="flex items-center justify-between p-3 bg-[#1a1a1a] rounded-lg border border-[#2a2a2a]">
+							<div class="flex items-center gap-3 min-w-0">
+								<div class="w-8 h-8 rounded-lg bg-[#252525] flex items-center justify-center flex-shrink-0">
+									{#if source.source_type === 'google_sheets'}
+										<svg class="w-4 h-4 text-[#34a853]" viewBox="0 0 24 24" fill="currentColor">
+											<path d="M19.5 3H4.5C3.67 3 3 3.67 3 4.5v15c0 .83.67 1.5 1.5 1.5h15c.83 0 1.5-.67 1.5-1.5v-15c0-.83-.67-1.5-1.5-1.5zM9 17H7v-2h2v2zm0-4H7v-2h2v2zm0-4H7V7h2v2zm8 8h-6v-2h6v2zm0-4h-6v-2h6v2zm0-4h-6V7h6v2z"/>
+										</svg>
+									{:else}
+										<svg class="w-4 h-4 text-[#888888]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+										</svg>
+									{/if}
+								</div>
+								<div class="min-w-0">
+									<p class="text-sm text-white truncate">{source.source_name}</p>
+									<p class="text-xs text-[#666666]">
+										{formatRelativeTime(source.last_imported_at)} · {source.row_count} metrics
+									</p>
+								</div>
+							</div>
+							{#if source.source_type === 'google_sheets' && source.source_url}
+								<button
+									type="button"
+									onclick={() => reimportFromSource(source)}
+									disabled={extracting}
+									class="text-xs text-[#c9a962] hover:text-[#e0bc6a] font-medium transition-colors flex items-center gap-1"
+								>
+									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+									</svg>
+									Re-import
+								</button>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
 
 		{#if !extractionResult}
 			<!-- File Upload Zone -->
@@ -362,6 +538,9 @@
 							}}
 						>
 							<input type="hidden" name="metrics" value={JSON.stringify(editedMetrics)} />
+							{#if importSource}
+								<input type="hidden" name="importSource" value={JSON.stringify(importSource)} />
+							{/if}
 
 							<div class="overflow-x-auto">
 								<table class="w-full">
