@@ -8,13 +8,16 @@
 		value: number;
 	}
 
+	import type { ApexOptions } from 'apexcharts';
+
 	let {
 		data,
 		metricTypeId,
 		title,
 		color = '#d4a853',
 		expandable = true,
-		yAxisLabel = ''
+		yAxisLabel = '',
+		annotations = null
 	}: {
 		data: DataPoint[];
 		metricTypeId: string;
@@ -22,6 +25,7 @@
 		color?: string;
 		expandable?: boolean;
 		yAxisLabel?: string;
+		annotations?: ApexOptions['annotations'] | null;
 	} = $props();
 
 	let chartContainer: HTMLElement | undefined = $state();
@@ -175,7 +179,8 @@
 				y: {
 					formatter: (val: number) => formatValue(metricTypeId, val)
 				}
-			}
+			},
+			annotations: annotations ?? undefined
 		};
 	}
 

@@ -377,6 +377,33 @@
 		border-color: #282828;
 		background: #171717;
 	}
+
+	/* Enhanced insight card */
+	.enhanced-insight-card {
+		background: linear-gradient(145deg, #151515 0%, #111111 100%);
+		border: 1px solid #1f1f1f;
+		border-radius: 1rem;
+		padding: 1.25rem;
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		position: relative;
+	}
+
+	.enhanced-insight-card::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 1px;
+		background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+	}
+
+	.enhanced-insight-card:hover {
+		border-color: #282828;
+		background: linear-gradient(145deg, #171717 0%, #131313 100%);
+		transform: translateY(-1px);
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+	}
 }
 
 @layer utilities {

@@ -76,11 +76,23 @@ export const load: PageServerLoad = async ({ url, locals: { supabaseAdmin } }) =
 		.limit(1)
 		.single();
 
+	// Fetch user's chart annotations
+	const { data: annotations, error: annotationsError } = await supabaseAdmin
+		.from('chart_annotations')
+		.select('*')
+		.eq('user_id', PRIVATE_SINGLE_USER_ID)
+		.order('annotation_date', { ascending: false });
+
+	if (annotationsError) {
+		console.error('Failed to fetch annotations:', annotationsError);
+	}
+
 	return {
 		user: null,
 		metrics: metrics ?? [],
 		metricTypes: metricTypes ?? [],
 		sharedLinks: sharedLinks ?? [],
+		annotations: annotations ?? [],
 		range,
 		lastImport: lastImport ?? null
 	};
@@ -117,6 +129,66 @@ export const actions: Actions = {
 		if (error) {
 			console.error('Failed to delete link:', error);
 			return fail(500, { error: 'Failed to delete link' });
+		}
+
+		return { success: true };
+	},
+
+	saveAnnotation: async ({ request, locals: { supabaseAdmin } }) => {
+		const formData = await request.formData();
+		const annotationDate = formData.get('annotationDate') as string;
+		const label = formData.get('label') as string;
+		const description = formData.get('description') as string;
+		const category = formData.get('category') as string;
+		const color = formData.get('color') as string;
+
+		if (!annotationDate || !label) {
+			return fail(400, { error: 'Date and label are required' });
+		}
+
+		if (label.length > 50) {
+			return fail(400, { error: 'Label must be 50 characters or less' });
+		}
+
+		const validCategories = ['fed_rate', 'local_event', 'market_event', 'custom'];
+		if (!validCategories.includes(category)) {
+			return fail(400, { error: 'Invalid category' });
+		}
+
+		const { error } = await supabaseAdmin.from('chart_annotations').insert({
+			user_id: PRIVATE_SINGLE_USER_ID,
+			annotation_date: annotationDate,
+			label: label.trim(),
+			description: description?.trim() || null,
+			category,
+			color: color || '#d4a853'
+		});
+
+		if (error) {
+			console.error('Failed to save annotation:', error);
+			return fail(500, { error: 'Failed to save annotation' });
+		}
+
+		return { success: true };
+	},
+
+	deleteAnnotation: async ({ request, locals: { supabaseAdmin } }) => {
+		const formData = await request.formData();
+		const annotationId = formData.get('annotationId') as string;
+
+		if (!annotationId) {
+			return fail(400, { error: 'Annotation ID is required' });
+		}
+
+		const { error } = await supabaseAdmin
+			.from('chart_annotations')
+			.delete()
+			.eq('id', annotationId)
+			.eq('user_id', PRIVATE_SINGLE_USER_ID);
+
+		if (error) {
+			console.error('Failed to delete annotation:', error);
+			return fail(500, { error: 'Failed to delete annotation' });
 		}
 
 		return { success: true };

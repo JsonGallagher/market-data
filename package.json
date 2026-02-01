@@ -21,11 +21,13 @@
     "vite": "^6.0.0"
   },
   "dependencies": {
+    "@cloudflare/workerd-darwin-arm64": "^1.20260131.0",
     "@supabase/ssr": "^0.6.0",
     "@supabase/supabase-js": "^2.48.0",
     "apexcharts": "^5.3.6",
     "bits-ui": "^1.0.0",
     "clsx": "^2.1.0",
+    "supabase": "^2.74.5",
     "tailwind-merge": "^2.6.0",
     "tailwind-variants": "^1.0.0",
     "xlsx": "^0.18.5"

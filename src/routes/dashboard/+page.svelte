@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import TrendChart from '$lib/charts/TrendChart.svelte';
 	import MultiTrendChart from '$lib/charts/MultiTrendChart.svelte';
 	import MetricCard from '$lib/charts/MetricCard.svelte';
+	import AnnotationModal from '$lib/charts/AnnotationModal.svelte';
 	import { formatValue, calculatePercentChange } from '$lib/validation';
+	import { generateEnhancedInsights, getMarketClassification, type EnhancedInsight } from '$lib/insights/enhanced-insights';
+	import { getConditionLabel, getConditionColor } from '$lib/insights/market-conditions';
+	import { buildChartAnnotations, type UserAnnotation } from '$lib/annotations/annotation-utils';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -321,6 +325,58 @@
 	let copiedLink = $state<string | null>(null);
 	const origin = browser ? window.location.origin : '';
 
+	// Annotation state
+	let showAnnotationModal = $state(false);
+	let showFedRates = $state(true);
+	let showInflectionPoints = $state(true);
+
+	// Enhanced insights
+	const enhancedInsights = $derived.by(() => {
+		const latest = latestDate;
+		if (!latest) return [];
+
+		const priorMonth = sortedDates[sortedDates.length - 2] ?? null;
+
+		return generateEnhancedInsights({
+			latestDate: latest,
+			priorMonthDate: priorMonth,
+			priorYearDate: shiftYear(latest, -1),
+			timeline,
+			metricsByDate
+		});
+	});
+
+	// Market classification for badge
+	const marketClassification = $derived.by(() => {
+		const latest = latestDate;
+		if (!latest) return null;
+
+		const priorMonth = sortedDates[sortedDates.length - 2] ?? null;
+
+		return getMarketClassification({
+			latestDate: latest,
+			priorMonthDate: priorMonth,
+			priorYearDate: shiftYear(latest, -1),
+			timeline,
+			metricsByDate
+		});
+	});
+
+	// Build annotations for charts
+	function getAnnotationsForMetric(metricTypeId: string, metricData: { date: string; value: number }[]) {
+		const userAnnotations = (data.annotations ?? []) as UserAnnotation[];
+		return buildChartAnnotations(metricData, userAnnotations, {
+			showFedRates,
+			showInflectionPoints,
+			metricTypeId,
+			metricLabel: getDisplayName(metricTypeId)
+		});
+	}
+
+	function handleAnnotationSaved() {
+		invalidateAll();
+	}
+
 	function copyToClipboard(token: string) {
 		if (!browser) return;
 		// Include current date range in shared link
@@ -414,6 +470,15 @@
 			<div class="mb-12">
 				<div class="flex items-center gap-3 mb-4">
 					<span class="section-label">Market Dashboard</span>
+					{#if marketClassification}
+						<span
+							class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider"
+							style="background-color: {getConditionColor(marketClassification.condition)}20; color: {getConditionColor(marketClassification.condition)}; border: 1px solid {getConditionColor(marketClassification.condition)}40;"
+						>
+							<span class="w-2 h-2 rounded-full" style="background-color: {getConditionColor(marketClassification.condition)};"></span>
+							{getConditionLabel(marketClassification.condition)}
+						</span>
+					{/if}
 					<span class="h-px flex-1 bg-gradient-to-r from-[#242424] to-transparent"></span>
 				</div>
 				<h1 class="text-[#fafafa] max-w-2xl mb-4">
@@ -498,17 +563,35 @@
 				{/each}
 			</div>
 
-			<!-- Key Insights -->
-			{#if insights.length > 0}
+			<!-- Key Insights (Enhanced) -->
+			{#if enhancedInsights.length > 0}
 				<div class="lux-card p-6 mb-10">
 					<div class="flex items-center justify-between mb-5">
 						<h2 class="text-xl text-[#fafafa]">Key Insights</h2>
 						<span class="text-[11px] text-[#808080] uppercase tracking-wider">as of {latestLabel}</span>
 					</div>
-					<div class="grid md:grid-cols-2 gap-3">
-						{#each insights as insight, i}
-							<div class="insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
-								<p class="text-[#a0a0a0] text-sm leading-relaxed">{insight}</p>
+					<div class="grid md:grid-cols-2 gap-4">
+						{#each enhancedInsights as insight, i}
+							<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
+								<div class="flex items-start gap-2 mb-3">
+									<span class="inline-flex items-center px-2.5 py-1 rounded text-[11px] font-semibold uppercase tracking-wider
+										{insight.category === 'market_condition' ? 'bg-[#d4a853]/20 text-[#d4a853]' :
+										 insight.category === 'price' ? 'bg-blue-500/20 text-blue-400' :
+										 insight.category === 'inventory' ? 'bg-purple-500/20 text-purple-400' :
+										 'bg-emerald-500/20 text-emerald-400'}">
+										{insight.category.replace('_', ' ')}
+									</span>
+									{#if insight.priority === 'high'}
+										<span class="inline-flex items-center px-2 py-1 rounded text-[11px] font-semibold uppercase tracking-wider bg-red-500/20 text-red-400">
+											High
+										</span>
+									{/if}
+								</div>
+								<h4 class="text-white text-lg font-semibold mb-2">{insight.headline}</h4>
+								<p class="text-[#b8b8b8] text-sm leading-relaxed mb-4">{insight.context}</p>
+								<div class="pt-3 border-t border-[#1f1f1f]">
+									<p class="text-[#c4b5fd] text-sm leading-relaxed italic">{insight.agentTalkingPoint}</p>
+								</div>
 							</div>
 						{/each}
 					</div>
@@ -517,9 +600,47 @@
 
 			<!-- Charts Section -->
 			<div class="mb-10">
-				<div class="flex items-center gap-3 mb-5">
+				<div class="flex flex-wrap items-center gap-3 mb-5">
 					<h2 class="text-xl text-[#fafafa]">Market Trends</h2>
 					<span class="h-px flex-1 bg-gradient-to-r from-[#242424] to-transparent"></span>
+
+					<!-- Annotation Controls -->
+					<div class="flex items-center gap-5">
+						<label class="flex items-center gap-2.5 cursor-pointer group">
+							<input
+								type="checkbox"
+								bind:checked={showFedRates}
+								class="sr-only peer"
+							/>
+							<div class="w-9 h-5 bg-[#252525] rounded-full peer-checked:bg-[#ef4444]/30 transition-colors relative">
+								<div class="absolute top-0.5 left-0.5 w-4 h-4 bg-[#505050] rounded-full peer-checked:bg-[#ef4444] peer-checked:translate-x-4 transition-all"></div>
+							</div>
+							<span class="text-xs text-[#808080] group-hover:text-[#a0a0a0] transition-colors">Fed Rates</span>
+						</label>
+
+						<label class="flex items-center gap-2.5 cursor-pointer group">
+							<input
+								type="checkbox"
+								bind:checked={showInflectionPoints}
+								class="sr-only peer"
+							/>
+							<div class="w-9 h-5 bg-[#252525] rounded-full peer-checked:bg-[#d4a853]/30 transition-colors relative">
+								<div class="absolute top-0.5 left-0.5 w-4 h-4 bg-[#505050] rounded-full peer-checked:bg-[#d4a853] peer-checked:translate-x-4 transition-all"></div>
+							</div>
+							<span class="text-xs text-[#808080] group-hover:text-[#a0a0a0] transition-colors">Inflections</span>
+						</label>
+
+						<button
+							type="button"
+							class="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-[#909090] hover:text-[#d4a853] bg-[#141414] border border-[#252525] hover:border-[#d4a853]/30 rounded-lg transition-colors"
+							onclick={() => showAnnotationModal = true}
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+							</svg>
+							Add Note
+						</button>
+					</div>
 				</div>
 				<div class="grid md:grid-cols-2 gap-4">
 					{#each metricOrder as typeId}
@@ -529,6 +650,7 @@
 								metricTypeId={typeId}
 								title={getDisplayName(typeId)}
 								yAxisLabel={axisLabels[typeId]?.y || ''}
+								annotations={getAnnotationsForMetric(typeId, metricsByType[typeId])}
 							/>
 						{/if}
 					{/each}
@@ -572,17 +694,25 @@
 						title="Months of Supply"
 						color="#d4a853"
 						yAxisLabel="Months"
+						annotations={getAnnotationsForMetric('months_of_supply', monthsOfSupplySeries)}
 					/>
 					<div class="chart-card p-5">
-						<h3 class="text-[13px] font-semibold tracking-wide text-[#909090] uppercase mb-4">Agent Talking Points</h3>
-						{#if insights.length === 0}
+						<h3 class="text-sm font-semibold tracking-wide text-[#909090] uppercase mb-5">Agent Talking Points</h3>
+						{#if enhancedInsights.length === 0}
 							<p class="text-[#808080] text-sm">Upload more history to unlock insights.</p>
 						{:else}
-							<ul class="space-y-3">
-								{#each insights as insight}
+							<ul class="space-y-5">
+								{#each enhancedInsights.filter(i => i.priority === 'high' || i.priority === 'medium').slice(0, 4) as insight}
 									<li class="flex items-start gap-3">
-										<span class="mt-2 h-1.5 w-1.5 rounded-full bg-[#d4a853] flex-shrink-0"></span>
-										<span class="text-[#909090] text-sm leading-relaxed">{insight}</span>
+										<span class="mt-2 h-2.5 w-2.5 rounded-full flex-shrink-0
+											{insight.category === 'market_condition' ? 'bg-[#d4a853]' :
+											 insight.category === 'price' ? 'bg-blue-400' :
+											 insight.category === 'inventory' ? 'bg-purple-400' :
+											 'bg-emerald-400'}"></span>
+										<div>
+											<span class="text-white text-lg font-semibold block mb-1.5">{insight.headline}</span>
+											<span class="text-[#c4b5fd] text-sm leading-relaxed italic">{insight.agentTalkingPoint}</span>
+										</div>
 									</li>
 								{/each}
 							</ul>
@@ -690,3 +820,9 @@
 		</div>
 	</footer>
 </div>
+
+<!-- Annotation Modal -->
+<AnnotationModal
+	bind:isOpen={showAnnotationModal}
+	onSave={handleAnnotationSaved}
+/>
