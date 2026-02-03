@@ -1,7 +1,8 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { PRIVATE_SINGLE_USER_ID } from '$env/static/private';
-import type { AIInsight } from '$lib/ai/openai-insights';
+import type { AIInsight, AIMarketClassification } from '$lib/ai/openai-insights';
+import { requireAuth } from '$lib/server/auth';
 
 type DateRange = '6m' | '12m' | '24m' | '5y' | 'all';
 
@@ -27,7 +28,10 @@ function isValidRange(value: string | null): value is DateRange {
 	return value === '6m' || value === '12m' || value === '24m' || value === '5y' || value === 'all';
 }
 
-export const load: PageServerLoad = async ({ url, locals: { supabaseAdmin } }) => {
+export const load: PageServerLoad = async (event) => {
+	requireAuth(event);
+	const { url, locals: { supabaseAdmin } } = event;
+
 	// Get date range from URL param, default to 12 months
 	const rangeParam = url.searchParams.get('range');
 	const range: DateRange = isValidRange(rangeParam) ? rangeParam : '12m';
@@ -131,32 +135,39 @@ export const load: PageServerLoad = async ({ url, locals: { supabaseAdmin } }) =
 		console.error('Failed to fetch annotations:', annotationsError);
 	}
 
-	// Fetch cached AI insights (generated on import, not live)
+	// Fetch cached AI insights and market condition (generated on import, not live)
 	let aiInsights: AIInsight[] = [];
+	let aiMarketCondition: AIMarketClassification | null = null;
 	const { data: cachedInsights } = await supabaseAdmin
 		.from('ai_insights')
-		.select('insights, generated_at')
+		.select('insights, market_condition, generated_at')
 		.eq('user_id', PRIVATE_SINGLE_USER_ID)
 		.single();
 
 	if (cachedInsights?.insights) {
 		aiInsights = cachedInsights.insights as AIInsight[];
 	}
+	if (cachedInsights?.market_condition) {
+		aiMarketCondition = cachedInsights.market_condition as AIMarketClassification;
+	}
 
 	return {
-		user: null,
 		metrics,
 		metricTypes: metricTypes ?? [],
 		sharedLinks: sharedLinks ?? [],
 		annotations: annotations ?? [],
 		range,
 		lastImport: lastImport ?? null,
-		aiInsights
+		aiInsights,
+		aiMarketCondition
 	};
 };
 
 export const actions: Actions = {
-	createLink: async ({ locals: { supabaseAdmin } }) => {
+	createLink: async (event) => {
+		requireAuth(event);
+		const { locals: { supabaseAdmin } } = event;
+
 		const { error } = await supabaseAdmin.from('shared_links').insert({
 			user_id: PRIVATE_SINGLE_USER_ID
 		});
@@ -169,7 +180,10 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	deleteLink: async ({ request, locals: { supabaseAdmin } }) => {
+	deleteLink: async (event) => {
+		requireAuth(event);
+		const { request, locals: { supabaseAdmin } } = event;
+
 		const formData = await request.formData();
 		const linkId = formData.get('linkId') as string;
 
@@ -191,7 +205,10 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	saveAnnotation: async ({ request, locals: { supabaseAdmin } }) => {
+	saveAnnotation: async (event) => {
+		requireAuth(event);
+		const { request, locals: { supabaseAdmin } } = event;
+
 		const formData = await request.formData();
 		const annotationDate = formData.get('annotationDate') as string;
 		const label = formData.get('label') as string;
@@ -229,7 +246,10 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	deleteAnnotation: async ({ request, locals: { supabaseAdmin } }) => {
+	deleteAnnotation: async (event) => {
+		requireAuth(event);
+		const { request, locals: { supabaseAdmin } } = event;
+
 		const formData = await request.formData();
 		const annotationId = formData.get('annotationId') as string;
 

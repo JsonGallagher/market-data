@@ -2,8 +2,12 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { PRIVATE_SINGLE_USER_ID } from '$env/static/private';
 import { generateAIInsights, type MarketSummary } from '$lib/ai/openai-insights';
+import { requireAuth } from '$lib/server/auth';
 
-export const load: PageServerLoad = async ({ locals: { supabaseAdmin } }) => {
+export const load: PageServerLoad = async (event) => {
+	requireAuth(event);
+	const { locals: { supabaseAdmin } } = event;
+
 	// Fetch recent import sources
 	const { data: importSources, error } = await supabaseAdmin
 		.from('import_sources')
@@ -17,7 +21,6 @@ export const load: PageServerLoad = async ({ locals: { supabaseAdmin } }) => {
 	}
 
 	return {
-		user: null,
 		importSources: importSources ?? []
 	};
 };
@@ -51,7 +54,10 @@ function isValidRecordedDate(value: string): boolean {
 }
 
 export const actions: Actions = {
-	default: async ({ request, locals: { supabaseAdmin } }) => {
+	default: async (event) => {
+		requireAuth(event);
+		const { request, locals: { supabaseAdmin }, platform } = event;
+
 		const formData = await request.formData();
 		const metricsJson = formData.get('metrics') as string;
 		const importSourceJson = formData.get('importSource') as string | null;
@@ -169,9 +175,13 @@ export const actions: Actions = {
 		}
 
 		// Generate and cache AI insights in background (don't block response)
-		generateAndCacheInsights(supabaseAdmin).catch(err => {
-			console.error('Failed to generate AI insights:', err);
-		});
+		// Use waitUntil for Cloudflare Workers to ensure the promise completes
+		const insightsPromise = generateAndCacheInsights(supabaseAdmin);
+		if (platform?.ctx) {
+			platform.ctx.waitUntil(insightsPromise.catch(console.error));
+		} else {
+			insightsPromise.catch(console.error);
+		}
 
 		return { success: true };
 	}
@@ -249,15 +259,16 @@ async function generateAndCacheInsights(supabaseAdmin: any) {
 		}
 	};
 
-	const insights = await generateAIInsights(summary);
+	const result = await generateAIInsights(summary);
 
-	if (insights.length > 0) {
-		// Upsert cached insights
+	if (result.insights.length > 0 || result.marketCondition) {
+		// Upsert cached insights and market condition
 		await supabaseAdmin
 			.from('ai_insights')
 			.upsert({
 				user_id: PRIVATE_SINGLE_USER_ID,
-				insights: insights,
+				insights: result.insights,
+				market_condition: result.marketCondition,
 				generated_at: new Date().toISOString()
 			}, { onConflict: 'user_id' });
 	}

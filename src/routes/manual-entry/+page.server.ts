@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { PRIVATE_SINGLE_USER_ID } from '$env/static/private';
+import { requireAuth } from '$lib/server/auth';
 
 const METRIC_TYPE_IDS = [
 	'median_price',
@@ -13,12 +14,16 @@ const METRIC_TYPE_IDS = [
 	'list_to_sale_ratio'
 ];
 
-export const load: PageServerLoad = async () => {
-	return { user: null };
+export const load: PageServerLoad = async (event) => {
+	requireAuth(event);
+	return {};
 };
 
 export const actions: Actions = {
-	default: async ({ request, locals: { supabaseAdmin } }) => {
+	default: async (event) => {
+		requireAuth(event);
+		const { request, locals: { supabaseAdmin } } = event;
+
 		const formData = await request.formData();
 		const recordedDateInput = formData.get('recordedDate') as string;
 

@@ -25,25 +25,13 @@
 		{ value: 'all', label: 'All time', changeLabel: 'total' }
 	];
 
-	// Use derived to track server data, state for UI updates
-	const serverRange = $derived(data.range as DateRange);
-	let dateRange = $state<DateRange>('12m');
+	// Initialize from server data (server defaults to '12m' if no URL param)
+	let dateRange = $state<DateRange>(data.range as DateRange);
 
-	// Sync with server data and localStorage
+	// Sync with server data when it changes (e.g., navigation)
 	$effect(() => {
-		// Initialize from server data
-		dateRange = serverRange;
-
-		// Check localStorage for saved preference (only if no URL param)
-		if (browser) {
-			const urlParams = new URLSearchParams(window.location.search);
-			if (!urlParams.has('range')) {
-				const saved = localStorage.getItem(STORAGE_KEY);
-				if (saved && ['6m', '12m', '24m', '5y', 'all'].includes(saved)) {
-					dateRange = saved as DateRange;
-					goto(`?range=${saved}`, { replaceState: true, noScroll: true });
-				}
-			}
+		if (data.range !== dateRange) {
+			dateRange = data.range as DateRange;
 		}
 	});
 
@@ -353,8 +341,19 @@
 		});
 	});
 
-	// Market classification for badge
+	// Market classification for badge - prefer AI classification, fall back to rules
 	const marketClassification = $derived.by(() => {
+		// Use AI classification if available
+		if (data.aiMarketCondition) {
+			return {
+				condition: data.aiMarketCondition.condition,
+				confidence: data.aiMarketCondition.confidence,
+				reasoning: data.aiMarketCondition.reasoning,
+				factors: [] // AI doesn't provide factor breakdown
+			};
+		}
+
+		// Fall back to rule-based classification
 		const latest = latestDate;
 		if (!latest) return null;
 
@@ -387,11 +386,11 @@
 
 <div class="min-h-screen bg-[#0c0c0c]">
 	<!-- Navigation -->
-	<nav class="sticky top-0 z-40 border-b border-[#1a1a1a] bg-[#0c0c0c]/90 backdrop-blur-lg">
+	<nav class="sticky top-0 z-40 bg-gradient-to-r from-[#141414]/95 via-[#1a1a1a]/90 to-[#141414]/95 backdrop-blur-xl border-b border-[#d4a853]/10 shadow-lg shadow-black/20">
 		<div class="max-w-7xl mx-auto px-6 lg:px-8">
-			<div class="flex items-center justify-between h-16">
+			<div class="flex items-center justify-between h-20">
 				<!-- Logo -->
-				<a href="/dashboard" class="flex items-center gap-3 group">
+				<a href="/" class="flex items-center gap-3 group">
 					<div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center shadow-lg shadow-[#d4a853]/10 group-hover:shadow-[#d4a853]/20 transition-shadow">
 						<span class="text-[#0a0a0a] text-xs font-bold tracking-tight">MD</span>
 					</div>
@@ -562,8 +561,6 @@
 
 			<!-- AI-Powered Insights -->
 			{#if data.aiInsights && data.aiInsights.length > 0}
-				{@const buyerInsights = data.aiInsights.filter(i => i.audience === 'buyer')}
-				{@const sellerInsights = data.aiInsights.filter(i => i.audience === 'seller')}
 				<FadeIn y={30} duration={0.6}>
 					<div class="lux-card p-8 mb-10">
 						<div class="flex items-center justify-between mb-8">
@@ -571,72 +568,89 @@
 							<span class="text-sm text-[#707070] uppercase tracking-wider">as of {latestLabel}</span>
 						</div>
 
-						<div class="grid lg:grid-cols-2 gap-6">
-							<!-- Buyer Insights -->
-							<div>
-								<p class="text-sm text-[#808080] uppercase tracking-wider mb-5 font-medium">For Buyers</p>
-								<StaggerContainer class="space-y-5" staggerDelay={0.12} delayStart={0.1}>
-									{#each buyerInsights as insight}
-										<StaggerItem>
-											<ScaleOnHover scale={1.01} y={-2}>
-												<div class="enhanced-insight-card">
-													<span class="category-label mb-4 block">Buyers</span>
-													<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
-													<p class="text-[#a0a0a0] text-lg leading-relaxed mb-4">{insight.context}</p>
-													<div class="pt-4 border-t border-[#252525]">
-														<p class="text-[#c0c0c0] text-lg leading-relaxed italic">"{insight.talkingPoint}"</p>
-													</div>
-												</div>
-											</ScaleOnHover>
-										</StaggerItem>
-									{/each}
-								</StaggerContainer>
-							</div>
-
-							<!-- Seller Insights -->
-							<div>
-								<p class="text-sm text-[#808080] uppercase tracking-wider mb-5 font-medium">For Sellers</p>
-								<StaggerContainer class="space-y-5" staggerDelay={0.12} delayStart={0.2}>
-									{#each sellerInsights as insight}
-										<StaggerItem>
-											<ScaleOnHover scale={1.01} y={-2}>
-												<div class="enhanced-insight-card">
-													<span class="category-label mb-4 block">Sellers</span>
-													<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
-													<p class="text-[#a0a0a0] text-lg leading-relaxed mb-4">{insight.context}</p>
-													<div class="pt-4 border-t border-[#252525]">
-														<p class="text-[#c0c0c0] text-lg leading-relaxed italic">"{insight.talkingPoint}"</p>
-													</div>
-												</div>
-											</ScaleOnHover>
-										</StaggerItem>
-									{/each}
-								</StaggerContainer>
-							</div>
-						</div>
+						<StaggerContainer class="grid md:grid-cols-2 gap-5 items-stretch" staggerDelay={0.1}>
+							{#each data.aiInsights as insight}
+								<StaggerItem class="h-full">
+									<ScaleOnHover scale={1.01} y={-2} class="h-full">
+										<div class="enhanced-insight-card h-full flex flex-col">
+											<div class="flex items-center justify-between mb-4">
+												<span class="category-label">
+													{(insight.category ?? 'insight').replace('_', ' ')}
+												</span>
+												{#if insight.sentiment === 'positive'}
+													<span class="flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
+														<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+														</svg>
+														Positive
+													</span>
+												{:else if insight.sentiment === 'negative'}
+													<span class="flex items-center gap-1.5 text-red-400 text-xs font-medium">
+														<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+														</svg>
+														Negative
+													</span>
+												{:else}
+													<span class="flex items-center gap-1.5 text-[#707070] text-xs font-medium">
+														<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14" />
+														</svg>
+														Neutral
+													</span>
+												{/if}
+											</div>
+											<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+											<p class="text-[#a0a0a0] text-base leading-relaxed flex-grow">{insight.context}</p>
+										</div>
+									</ScaleOnHover>
+								</StaggerItem>
+							{/each}
+						</StaggerContainer>
 					</div>
 				</FadeIn>
 			{:else if enhancedInsights.length > 0}
 				<!-- Fallback to rule-based insights -->
 				<FadeIn y={30} duration={0.6}>
-					<div class="lux-card p-6 mb-10">
-						<div class="flex items-center justify-between mb-5">
-							<h2 class="text-xl text-[#fafafa]">Key Insights</h2>
-							<span class="text-[11px] text-[#808080] uppercase tracking-wider">as of {latestLabel}</span>
+					<div class="lux-card p-8 mb-10">
+						<div class="flex items-center justify-between mb-8">
+							<h2 class="text-2xl text-[#fafafa]">Key Insights</h2>
+							<span class="text-sm text-[#707070] uppercase tracking-wider">as of {latestLabel}</span>
 						</div>
-						<StaggerContainer class="grid md:grid-cols-2 gap-4" staggerDelay={0.1}>
+						<StaggerContainer class="grid md:grid-cols-2 gap-5 items-stretch" staggerDelay={0.1}>
 							{#each enhancedInsights as insight}
-								<StaggerItem>
-									<ScaleOnHover scale={1.01} y={-2}>
-										<div class="enhanced-insight-card h-full">
-											<span class="category-label mb-4 block">
-												{insight.category.replace('_', ' ')}
-											</span>
-											<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
-											<p class="text-[#a0a0a0] text-base leading-relaxed mb-4">{insight.context}</p>
-											<div class="pt-4 border-t border-[#252525]">
-												<p class="text-[#c0c0c0] text-base leading-relaxed italic">{insight.agentTalkingPoint}</p>
+								<StaggerItem class="h-full">
+									<ScaleOnHover scale={1.01} y={-2} class="h-full">
+										<div class="enhanced-insight-card h-full flex flex-col">
+											<div class="flex items-center justify-between mb-4">
+												<span class="category-label">
+													{insight.category.replace('_', ' ')}
+												</span>
+												{#if insight.sentiment === 'positive'}
+													<span class="flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
+														<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+														</svg>
+														Positive
+													</span>
+												{:else if insight.sentiment === 'negative'}
+													<span class="flex items-center gap-1.5 text-red-400 text-xs font-medium">
+														<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+														</svg>
+														Negative
+													</span>
+												{:else}
+													<span class="flex items-center gap-1.5 text-[#707070] text-xs font-medium">
+														<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14" />
+														</svg>
+														Neutral
+													</span>
+												{/if}
 											</div>
+											<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+											<p class="text-[#a0a0a0] text-base leading-relaxed flex-grow">{insight.context}</p>
 										</div>
 									</ScaleOnHover>
 								</StaggerItem>
@@ -717,57 +731,69 @@
 						</StaggerItem>
 					</StaggerContainer>
 
-					<!-- Agent Talking Points - Horizontal Grid -->
-					{#if data.aiInsights && data.aiInsights.length > 0}
-						{@const buyerPts = data.aiInsights.filter(i => i.audience === 'buyer')}
-						{@const sellerPts = data.aiInsights.filter(i => i.audience === 'seller')}
-						<div class="mt-6">
-							<h3 class="text-base font-semibold tracking-wide text-[#909090] uppercase mb-4">Agent Talking Points</h3>
-							<StaggerContainer class="grid md:grid-cols-2 lg:grid-cols-4 gap-4" staggerDelay={0.08}>
-								{#each buyerPts.slice(0, 2) as insight}
-									<StaggerItem>
-										<ScaleOnHover scale={1.01} y={-2}>
-											<div class="enhanced-insight-card h-full">
-												<span class="category-label mb-3 block">Buyers</span>
-												<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{insight.headline}</h4>
-												<p class="text-[#a0a0a0] text-sm leading-relaxed italic">"{insight.talkingPoint}"</p>
-											</div>
-										</ScaleOnHover>
-									</StaggerItem>
-								{/each}
-								{#each sellerPts.slice(0, 2) as insight}
-									<StaggerItem>
-										<ScaleOnHover scale={1.01} y={-2}>
-											<div class="enhanced-insight-card h-full">
-												<span class="category-label mb-3 block">Sellers</span>
-												<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{insight.headline}</h4>
-												<p class="text-[#a0a0a0] text-sm leading-relaxed italic">"{insight.talkingPoint}"</p>
-											</div>
-										</ScaleOnHover>
-									</StaggerItem>
-								{/each}
-							</StaggerContainer>
-						</div>
-					{:else if enhancedInsights.length > 0}
-						<div class="mt-6">
-							<h3 class="text-base font-semibold tracking-wide text-[#909090] uppercase mb-4">Agent Talking Points</h3>
-							<StaggerContainer class="grid md:grid-cols-2 lg:grid-cols-4 gap-4" staggerDelay={0.08}>
-								{#each enhancedInsights.filter(i => i.priority === 'high' || i.priority === 'medium').slice(0, 4) as insight}
-									<StaggerItem>
-										<ScaleOnHover scale={1.01} y={-2}>
-											<div class="enhanced-insight-card h-full">
-												<span class="category-label mb-3 block">{insight.category.replace('_', ' ')}</span>
-												<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{insight.headline}</h4>
-												<p class="text-[#a0a0a0] text-sm leading-relaxed italic">{insight.agentTalkingPoint}</p>
-											</div>
-										</ScaleOnHover>
-									</StaggerItem>
-								{/each}
-							</StaggerContainer>
-						</div>
-					{/if}
 				</div>
 			</FadeIn>
+
+			<!-- Agent Talking Points - Separate Section at Bottom -->
+			{#if data.aiInsights && data.aiInsights.length > 0}
+				<FadeIn y={30} duration={0.6}>
+					<div class="lux-card p-6 mb-10">
+						<div class="flex items-center gap-4 mb-6">
+							<div class="w-11 h-11 rounded-lg bg-[#141414] border border-[#2a2a2a] flex items-center justify-center">
+								<svg class="w-5 h-5 text-[#d4a853]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+								</svg>
+							</div>
+							<div>
+								<h2 class="text-xl text-[#fafafa]">Agent Talking Points</h2>
+								<p class="text-sm text-[#a0a0a0]">Ready-to-use phrases for client conversations</p>
+							</div>
+						</div>
+						<StaggerContainer class="grid md:grid-cols-2 gap-4 items-stretch" staggerDelay={0.08}>
+							{#each data.aiInsights as insight}
+								<StaggerItem class="h-full">
+									<ScaleOnHover scale={1.01} y={-2} class="h-full">
+										<div class="enhanced-insight-card h-full flex flex-col">
+											<span class="category-label mb-3">{(insight.category ?? 'insight').replace('_', ' ')}</span>
+											<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{insight.headline}</h4>
+											<p class="text-[#c0c0c0] text-base leading-relaxed italic mt-auto">"{insight.talkingPoint}"</p>
+										</div>
+									</ScaleOnHover>
+								</StaggerItem>
+							{/each}
+						</StaggerContainer>
+					</div>
+				</FadeIn>
+			{:else if enhancedInsights.length > 0}
+				<FadeIn y={30} duration={0.6}>
+					<div class="lux-card p-6 mb-10">
+						<div class="flex items-center gap-4 mb-6">
+							<div class="w-11 h-11 rounded-lg bg-[#141414] border border-[#2a2a2a] flex items-center justify-center">
+								<svg class="w-5 h-5 text-[#d4a853]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+								</svg>
+							</div>
+							<div>
+								<h2 class="text-xl text-[#fafafa]">Agent Talking Points</h2>
+								<p class="text-sm text-[#a0a0a0]">Ready-to-use phrases for client conversations</p>
+							</div>
+						</div>
+						<StaggerContainer class="grid md:grid-cols-2 gap-4 items-stretch" staggerDelay={0.08}>
+							{#each enhancedInsights.filter(i => i.priority === 'high' || i.priority === 'medium').slice(0, 4) as insight}
+								<StaggerItem class="h-full">
+									<ScaleOnHover scale={1.01} y={-2} class="h-full">
+										<div class="enhanced-insight-card h-full flex flex-col">
+											<span class="category-label mb-3">{insight.category.replace('_', ' ')}</span>
+											<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{insight.headline}</h4>
+											<p class="text-[#c0c0c0] text-base leading-relaxed italic mt-auto">{insight.agentTalkingPoint}</p>
+										</div>
+									</ScaleOnHover>
+								</StaggerItem>
+							{/each}
+						</StaggerContainer>
+					</div>
+				</FadeIn>
+			{/if}
 
 			<!-- Sharing Section -->
 			<FadeIn y={30} duration={0.6}>

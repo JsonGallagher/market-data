@@ -2,7 +2,7 @@
 	<title>Market Data - Real Estate Analytics Dashboard</title>
 </svelte:head>
 
-<main class="min-h-screen bg-[#0c0c0c] overflow-hidden">
+<main class="min-h-screen bg-[#0c0c0c] overflow-hidden flex flex-col">
 	<!-- Background Effects -->
 	<div class="fixed inset-0 pointer-events-none">
 		<div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[#d4a853]/5 rounded-full blur-[120px]"></div>
@@ -10,11 +10,12 @@
 	</div>
 
 	<!-- Navigation -->
-	<nav class="relative z-10 border-b border-[#1a1a1a]/50">
-		<div class="max-w-6xl mx-auto px-6 lg:px-8">
-			<div class="flex items-center justify-between h-16">
-				<a href="/" class="flex items-center gap-3">
-					<div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center shadow-lg shadow-[#d4a853]/10">
+	<nav class="relative z-10 bg-gradient-to-r from-[#141414]/95 via-[#1a1a1a]/90 to-[#141414]/95 backdrop-blur-xl border-b border-[#d4a853]/10 shadow-lg shadow-black/20">
+		<div class="absolute inset-0 bg-gradient-to-r from-[#d4a853]/[0.02] via-transparent to-[#d4a853]/[0.02]"></div>
+		<div class="max-w-6xl mx-auto px-6 lg:px-8 relative">
+			<div class="flex items-center justify-between h-20">
+				<a href="/" class="flex items-center gap-3 group">
+					<div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center shadow-lg shadow-[#d4a853]/20 group-hover:shadow-[#d4a853]/30 transition-shadow">
 						<span class="text-[#0a0a0a] text-xs font-bold tracking-tight">MD</span>
 					</div>
 					<span class="text-[#fafafa] text-sm font-medium tracking-wide">Market Data</span>
@@ -105,7 +106,7 @@
 	</div>
 
 	<!-- Footer -->
-	<footer class="relative z-10 border-t border-[#1a1a1a]/50">
+	<footer class="relative z-10 border-t border-[#1a1a1a]/50 mt-auto">
 		<div class="max-w-6xl mx-auto px-6 lg:px-8 py-8">
 			<div class="flex flex-col md:flex-row items-center justify-between gap-4">
 				<div class="flex items-center gap-3">

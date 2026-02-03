@@ -18,6 +18,9 @@ declare global {
 				PUBLIC_SUPABASE_URL: string;
 				PUBLIC_SUPABASE_ANON_KEY: string;
 			};
+			ctx?: {
+				waitUntil(promise: Promise<unknown>): void;
+			};
 		}
 	}
 }

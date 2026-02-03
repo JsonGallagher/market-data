@@ -14,6 +14,7 @@ import { formatValue, calculatePercentChange } from '$lib/validation';
 
 export type InsightCategory = 'market_condition' | 'price' | 'inventory' | 'velocity';
 export type InsightPriority = 'high' | 'medium' | 'low';
+export type InsightSentiment = 'positive' | 'negative' | 'neutral';
 
 export interface EnhancedInsight {
 	id: string;
@@ -22,6 +23,7 @@ export interface EnhancedInsight {
 	agentTalkingPoint: string;
 	priority: InsightPriority;
 	category: InsightCategory;
+	sentiment: InsightSentiment;
 }
 
 export interface MetricData {
@@ -170,13 +172,17 @@ function generateMarketConditionInsight(
 			break;
 	}
 
+	// Balanced = neutral, sellers/buyers markets have implications but aren't inherently good/bad
+	const sentiment: InsightSentiment = 'neutral';
+
 	return {
 		id: 'market-condition',
 		headline: `${label} (${classification.confidence} confidence)`,
 		context,
 		agentTalkingPoint: talkingPoint,
 		priority: 'high',
-		category: 'market_condition'
+		category: 'market_condition',
+		sentiment
 	};
 }
 
@@ -218,13 +224,17 @@ function generatePriceInsight(
 		talkingPoint = `Tell clients: 'Prices in ${monthName} are following typical seasonal patterns with ${Math.abs(yoyChange).toFixed(1)}% annual growth.'`;
 	}
 
+	// Price going up = positive, down = negative, tracking = neutral
+	const sentiment: InsightSentiment = yoyChange >= 3 ? 'positive' : yoyChange <= -3 ? 'negative' : 'neutral';
+
 	return {
 		id: 'price-trend',
 		headline,
 		context,
 		agentTalkingPoint: talkingPoint,
 		priority,
-		category: 'price'
+		category: 'price',
+		sentiment
 	};
 }
 
@@ -278,13 +288,20 @@ function generateInventoryInsight(
 			"Position this as: 'Inventory is balanced, so both buyers and sellers can transact with confidence.'";
 	}
 
+	// Low inventory can be positive (for sellers) or negative (for buyers) - neutral overall
+	// Elevated inventory signals more options but also slower market
+	const sentiment: InsightSentiment =
+		monthsOfSupply !== null && monthsOfSupply < 3 ? 'negative' :
+		monthsOfSupply !== null && monthsOfSupply > 6 ? 'negative' : 'neutral';
+
 	return {
 		id: 'inventory',
 		headline,
 		context,
 		agentTalkingPoint: talkingPoint,
 		priority,
-		category: 'inventory'
+		category: 'inventory',
+		sentiment
 	};
 }
 
@@ -346,13 +363,21 @@ function generateVelocityInsight(
 			"Position this as: 'The market is moving at a healthy pace with typical time-to-sell.'";
 	}
 
+	// Fast velocity = positive (healthy market), slow = negative, steady = neutral
+	const sentiment: InsightSentiment =
+		dom !== null && dom < 30 ? 'positive' :
+		dom !== null && dom > 60 ? 'negative' :
+		salesYoYChange !== null && salesYoYChange > 10 ? 'positive' :
+		salesYoYChange !== null && salesYoYChange < -10 ? 'negative' : 'neutral';
+
 	return {
 		id: 'velocity',
 		headline,
 		context,
 		agentTalkingPoint: talkingPoint,
 		priority,
-		category: 'velocity'
+		category: 'velocity',
+		sentiment
 	};
 }
 
@@ -382,13 +407,17 @@ function generateSpreadInsight(
 			? "Position this as: 'Luxury properties are trading well in this market—there's buyer appetite at higher price points.'"
 			: "Position this as: 'First-time buyers are active, and entry-level homes are seeing strong demand.'";
 
+	// High-end activity = positive market sign, entry-level dominance = neutral
+	const sentiment: InsightSentiment = spreadPercent > 0 ? 'positive' : 'neutral';
+
 	return {
 		id: 'price-spread',
 		headline,
 		context,
 		agentTalkingPoint: talkingPoint,
 		priority: 'low',
-		category: 'price'
+		category: 'price',
+		sentiment
 	};
 }
 

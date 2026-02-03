@@ -17,7 +17,7 @@
 				<span class="text-[#c9a962] text-xl font-medium tracking-wider">MD</span>
 			</div>
 			<h1 class="text-3xl text-white mb-2">Welcome back</h1>
-			<p class="text-[#888888]">Sign in to your account</p>
+			<p class="text-[#888888]">Enter your password to continue</p>
 		</div>
 
 		<div class="lux-card p-8">
@@ -39,20 +39,6 @@
 				class="space-y-6"
 			>
 				<div>
-					<label for="email" class="block text-sm font-medium text-white mb-3">
-						Email
-					</label>
-					<input
-						type="email"
-						id="email"
-						name="email"
-						required
-						class="lux-input"
-						placeholder="you@example.com"
-					/>
-				</div>
-
-				<div>
 					<label for="password" class="block text-sm font-medium text-white mb-3">
 						Password
 					</label>
@@ -61,9 +47,9 @@
 						id="password"
 						name="password"
 						required
-						minlength="6"
 						class="lux-input"
 						placeholder="••••••••"
+						autofocus
 					/>
 				</div>
 
@@ -75,13 +61,6 @@
 					{loading ? 'Signing in...' : 'Sign In'}
 				</button>
 			</form>
-
-			<p class="mt-6 text-center text-sm text-[#888888]">
-				Don't have an account?
-				<a href="/auth/register" class="text-[#c9a962] hover:underline">
-					Create one
-				</a>
-			</p>
 		</div>
 	</div>
 </div>

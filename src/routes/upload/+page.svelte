@@ -286,10 +286,10 @@
 
 <div class="min-h-screen bg-[#111111]">
 	<!-- Navigation -->
-	<nav class="border-b border-[#2a2a2a]">
+	<nav class="bg-gradient-to-r from-[#141414]/95 via-[#1a1a1a]/90 to-[#141414]/95 backdrop-blur-xl border-b border-[#d4a853]/10 shadow-lg shadow-black/20">
 		<div class="max-w-7xl mx-auto px-6 lg:px-8">
 			<div class="flex items-center justify-between h-20">
-				<a href="/dashboard" class="flex items-center gap-3">
+				<a href="/" class="flex items-center gap-3">
 					<div class="w-10 h-10 rounded-full border border-[#c9a962]/40 flex items-center justify-center">
 						<span class="text-[#c9a962] text-sm font-medium tracking-wider">MD</span>
 					</div>
@@ -325,8 +325,26 @@
 		{/if}
 
 		{#if form?.success}
-			<div class="mb-6 p-4 bg-[#c9a962]/10 border border-[#c9a962]/20 rounded-xl text-[#c9a962] text-sm">
-				Data saved successfully! <a href="/dashboard" class="underline hover:no-underline">View Dashboard</a>
+			<div class="mb-8 p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
+				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+					<div class="flex items-center gap-4">
+						<div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+							<svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+							</svg>
+						</div>
+						<div>
+							<h3 class="text-white font-semibold text-lg">Data imported successfully!</h3>
+							<p class="text-emerald-400/80 text-sm">Your metrics are now available on the dashboard.</p>
+						</div>
+					</div>
+					<a href="/dashboard" class="btn-primary whitespace-nowrap">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+						</svg>
+						View Dashboard
+					</a>
+				</div>
 			</div>
 		{/if}
 
@@ -637,21 +655,32 @@
 								</table>
 							</div>
 
-							<div class="mt-8 flex gap-4">
-								<button
-									type="submit"
-									disabled={saving || editedMetrics.length === 0}
-									class="btn-primary flex-1"
-								>
-									{saving ? 'Saving...' : `Save ${editedMetrics.length} Metrics`}
-								</button>
-								<button
-									type="button"
-									onclick={resetExtraction}
-									class="btn-secondary"
-								>
-									Cancel
-								</button>
+							<!-- Spacer for sticky footer -->
+							<div class="h-24"></div>
+
+							<!-- Sticky Action Bar -->
+							<div class="fixed bottom-0 left-0 right-0 bg-[#111111]/95 backdrop-blur-sm border-t border-[#2a2a2a] z-50">
+								<div class="max-w-4xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
+									<div class="text-sm text-[#888888]">
+										<span class="text-white font-medium">{editedMetrics.length}</span> metrics ready to save
+									</div>
+									<div class="flex gap-3">
+										<button
+											type="button"
+											onclick={resetExtraction}
+											class="btn-secondary py-2 px-5"
+										>
+											Cancel
+										</button>
+										<button
+											type="submit"
+											disabled={saving || editedMetrics.length === 0}
+											class="btn-primary py-2 px-8"
+										>
+											{saving ? 'Saving...' : 'Save Metrics'}
+										</button>
+									</div>
+								</div>
 							</div>
 						</form>
 					</div>

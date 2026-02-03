@@ -28,10 +28,10 @@
 
 <div class="min-h-screen bg-[#111111]">
 	<!-- Navigation -->
-	<nav class="border-b border-[#2a2a2a]">
+	<nav class="bg-gradient-to-r from-[#141414]/95 via-[#1a1a1a]/90 to-[#141414]/95 backdrop-blur-xl border-b border-[#d4a853]/10 shadow-lg shadow-black/20">
 		<div class="max-w-7xl mx-auto px-6 lg:px-8">
 			<div class="flex items-center justify-between h-20">
-				<a href="/dashboard" class="flex items-center gap-3">
+				<a href="/" class="flex items-center gap-3">
 					<div class="w-10 h-10 rounded-full border border-[#c9a962]/40 flex items-center justify-center">
 						<span class="text-[#c9a962] text-sm font-medium tracking-wider">MD</span>
 					</div>
