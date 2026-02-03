@@ -576,6 +576,7 @@
 							<div class="space-y-5">
 								{#each buyerInsights as insight, i}
 									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
+										<span class="category-label mb-4 block">Buyers</span>
 										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
 										<p class="text-[#a0a0a0] text-lg leading-relaxed mb-4">{insight.context}</p>
 										<div class="pt-4 border-t border-[#252525]">
@@ -592,6 +593,7 @@
 							<div class="space-y-5">
 								{#each sellerInsights as insight, i}
 									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
+										<span class="category-label mb-4 block">Sellers</span>
 										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
 										<p class="text-[#a0a0a0] text-lg leading-relaxed mb-4">{insight.context}</p>
 										<div class="pt-4 border-t border-[#252525]">
