@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import TrendChart from '$lib/charts/TrendChart.svelte';
 	import MultiTrendChart from '$lib/charts/MultiTrendChart.svelte';
 	import MetricCard from '$lib/charts/MetricCard.svelte';
@@ -46,12 +46,12 @@
 		}
 	});
 
-	function handleRangeChange(newRange: DateRange) {
+	async function handleRangeChange(newRange: DateRange) {
 		dateRange = newRange;
 		if (browser) {
 			localStorage.setItem(STORAGE_KEY, newRange);
 		}
-		goto(`?range=${newRange}`, { replaceState: true, noScroll: true });
+		await goto(`?range=${newRange}`, { replaceState: true, noScroll: true, invalidateAll: true });
 	}
 
 	// Format relative time for last import
@@ -481,15 +481,15 @@
 
 				<!-- Date Range Filter -->
 				<div class="flex flex-wrap items-center gap-4 mb-6">
-					<span class="text-xs text-[#707070] uppercase tracking-wider">Showing</span>
-					<div class="flex items-center gap-1 bg-[#111111] border border-[#1f1f1f] rounded-lg p-1">
+					<span class="text-sm text-[#909090] uppercase tracking-wider font-medium">Showing</span>
+					<div class="flex items-center gap-1 bg-[#111111] border border-[#252525] rounded-lg p-1">
 						{#each filterOptions as opt}
 							<button
 								type="button"
-								class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200
+								class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200
 									{dateRange === opt.value
 										? 'bg-[#d4a853] text-[#0a0a0a]'
-										: 'text-[#808080] hover:text-[#fafafa] hover:bg-[#1a1a1a]'}"
+										: 'text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#1a1a1a]'}"
 								onclick={() => handleRangeChange(opt.value)}
 							>
 								{opt.label}
@@ -498,28 +498,28 @@
 					</div>
 				</div>
 
-				<div class="flex flex-wrap items-center gap-4 text-xs">
-					<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#888888]">
-						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<div class="flex flex-wrap items-center gap-3 text-sm">
+					<span class="inline-flex items-center gap-2 px-4 py-2 bg-[#141414] border border-[#252525] rounded-full text-[#a0a0a0]">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 						</svg>
 						{monthCount} months
 					</span>
-					<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#888888]">
-						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<span class="inline-flex items-center gap-2 px-4 py-2 bg-[#141414] border border-[#252525] rounded-full text-[#a0a0a0]">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
 						</svg>
 						{data.metrics.length} metrics
 					</span>
-					<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#d4a853]/10 border border-[#d4a853]/20 rounded-full text-[#d4a853]">
-						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<span class="inline-flex items-center gap-2 px-4 py-2 bg-[#d4a853]/10 border border-[#d4a853]/30 rounded-full text-[#d4a853] font-medium">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 						</svg>
 						Data through {latestLabel}
 					</span>
 					{#if data.lastImport}
-						<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#1f1f1f] rounded-full text-[#888888]">
-							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<span class="inline-flex items-center gap-2 px-4 py-2 bg-[#141414] border border-[#252525] rounded-full text-[#a0a0a0]">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
 							Imported {formatLastImport(data.lastImport.last_imported_at)}
@@ -561,30 +561,46 @@
 
 			<!-- AI-Powered Insights -->
 			{#if data.aiInsights && data.aiInsights.length > 0}
-				<div class="lux-card p-6 mb-10">
-					<div class="flex items-center justify-between mb-5">
-						<div class="flex items-center gap-3">
-							<h2 class="text-xl text-[#fafafa]">Key Insights</h2>
-							<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30">
-								<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-									<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-								</svg>
-								AI-Powered
-							</span>
-						</div>
-						<span class="text-[11px] text-[#808080] uppercase tracking-wider">as of {latestLabel}</span>
+				{@const buyerInsights = data.aiInsights.filter(i => i.audience === 'buyer')}
+				{@const sellerInsights = data.aiInsights.filter(i => i.audience === 'seller')}
+				<div class="lux-card p-8 mb-10">
+					<div class="flex items-center justify-between mb-8">
+						<h2 class="text-2xl text-[#fafafa]">Key Insights</h2>
+						<span class="text-sm text-[#707070] uppercase tracking-wider">as of {latestLabel}</span>
 					</div>
-					<div class="grid md:grid-cols-3 gap-4">
-						{#each data.aiInsights as insight, i}
-							<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
-								<h4 class="text-white text-lg font-semibold mb-3">{insight.headline}</h4>
-								<p class="text-[#b8b8b8] text-sm leading-relaxed mb-4">{insight.context}</p>
-								<div class="pt-3 border-t border-[#1f1f1f]">
-									<p class="text-[10px] text-[#606060] uppercase tracking-wider mb-1.5">Client Talking Point</p>
-									<p class="text-[#c4b5fd] text-sm leading-relaxed italic">"{insight.talkingPoint}"</p>
-								</div>
+
+					<div class="grid lg:grid-cols-2 gap-6">
+						<!-- Buyer Insights -->
+						<div>
+							<p class="text-sm text-[#808080] uppercase tracking-wider mb-5 font-medium">For Buyers</p>
+							<div class="space-y-5">
+								{#each buyerInsights as insight, i}
+									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
+										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+										<p class="text-[#a0a0a0] text-lg leading-relaxed mb-4">{insight.context}</p>
+										<div class="pt-4 border-t border-[#252525]">
+											<p class="text-[#c0c0c0] text-lg leading-relaxed italic">"{insight.talkingPoint}"</p>
+										</div>
+									</div>
+								{/each}
 							</div>
-						{/each}
+						</div>
+
+						<!-- Seller Insights -->
+						<div>
+							<p class="text-sm text-[#808080] uppercase tracking-wider mb-5 font-medium">For Sellers</p>
+							<div class="space-y-5">
+								{#each sellerInsights as insight, i}
+									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
+										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+										<p class="text-[#a0a0a0] text-lg leading-relaxed mb-4">{insight.context}</p>
+										<div class="pt-4 border-t border-[#252525]">
+											<p class="text-[#c0c0c0] text-lg leading-relaxed italic">"{insight.talkingPoint}"</p>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</div>
 					</div>
 				</div>
 			{:else if enhancedInsights.length > 0}
@@ -597,24 +613,13 @@
 					<div class="grid md:grid-cols-2 gap-4">
 						{#each enhancedInsights as insight, i}
 							<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
-								<div class="flex items-start gap-2 mb-3">
-									<span class="inline-flex items-center px-2.5 py-1 rounded text-[11px] font-semibold uppercase tracking-wider
-										{insight.category === 'market_condition' ? 'bg-[#d4a853]/20 text-[#d4a853]' :
-										 insight.category === 'price' ? 'bg-blue-500/20 text-blue-400' :
-										 insight.category === 'inventory' ? 'bg-purple-500/20 text-purple-400' :
-										 'bg-emerald-500/20 text-emerald-400'}">
-										{insight.category.replace('_', ' ')}
-									</span>
-									{#if insight.priority === 'high'}
-										<span class="inline-flex items-center px-2 py-1 rounded text-[11px] font-semibold uppercase tracking-wider bg-red-500/20 text-red-400">
-											High
-										</span>
-									{/if}
-								</div>
-								<h4 class="text-white text-lg font-semibold mb-2">{insight.headline}</h4>
-								<p class="text-[#b8b8b8] text-sm leading-relaxed mb-4">{insight.context}</p>
-								<div class="pt-3 border-t border-[#1f1f1f]">
-									<p class="text-[#c4b5fd] text-sm leading-relaxed italic">{insight.agentTalkingPoint}</p>
+								<span class="category-label mb-4 block">
+									{insight.category.replace('_', ' ')}
+								</span>
+								<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+								<p class="text-[#a0a0a0] text-base leading-relaxed mb-4">{insight.context}</p>
+								<div class="pt-4 border-t border-[#252525]">
+									<p class="text-[#c0c0c0] text-base leading-relaxed italic">{insight.agentTalkingPoint}</p>
 								</div>
 							</div>
 						{/each}
@@ -624,9 +629,9 @@
 
 			<!-- Charts Section -->
 			<div class="mb-10">
-				<div class="flex flex-wrap items-center gap-3 mb-5">
-					<h2 class="text-xl text-[#fafafa]">Market Trends</h2>
-					<span class="h-px flex-1 bg-gradient-to-r from-[#242424] to-transparent"></span>
+				<div class="flex flex-wrap items-center gap-3 mb-6">
+					<h2 class="text-2xl text-[#fafafa]">Market Trends</h2>
+					<span class="h-px flex-1 bg-gradient-to-r from-[#303030] to-transparent"></span>
 				</div>
 				<div class="grid md:grid-cols-2 gap-4">
 					{#each metricOrder as typeId}
@@ -645,8 +650,8 @@
 			<!-- Market Intelligence -->
 			<div class="lux-card p-6 mb-10">
 				<div class="mb-6">
-					<h2 class="text-xl text-[#fafafa] mb-2">Market Intelligence</h2>
-					<p class="text-[#909090] text-sm">
+					<h2 class="text-2xl text-[#fafafa] mb-2">Market Intelligence</h2>
+					<p class="text-[#b0b0b0] text-base">
 						Layered analysis to help explain the story behind the numbers.
 					</p>
 				</div>
@@ -680,38 +685,45 @@
 						color="#d4a853"
 						yAxisLabel="Months"
 					/>
-					<div class="chart-card p-5">
-						<h3 class="text-sm font-semibold tracking-wide text-[#909090] uppercase mb-5">Agent Talking Points</h3>
+					<div class="chart-card p-6">
+						<h3 class="text-base font-semibold tracking-wide text-[#909090] uppercase mb-6">Agent Talking Points</h3>
 						{#if data.aiInsights && data.aiInsights.length > 0}
-							<ul class="space-y-5">
-								{#each data.aiInsights as insight}
-									<li class="flex items-start gap-3">
-										<span class="mt-2 h-2.5 w-2.5 rounded-full flex-shrink-0 bg-emerald-400"></span>
-										<div>
-											<span class="text-white text-lg font-semibold block mb-1.5">{insight.headline}</span>
-											<span class="text-[#c4b5fd] text-sm leading-relaxed italic">"{insight.talkingPoint}"</span>
+							{@const buyerPts = data.aiInsights.filter(i => i.audience === 'buyer')}
+							{@const sellerPts = data.aiInsights.filter(i => i.audience === 'seller')}
+							<div class="space-y-4">
+								{#each buyerPts as insight, i}
+									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
+										<span class="category-label mb-4 block">Buyers</span>
+										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+										<div class="pt-4 border-t border-[#252525]">
+											<p class="text-[#c0c0c0] text-base leading-relaxed italic">"{insight.talkingPoint}"</p>
 										</div>
-									</li>
+									</div>
 								{/each}
-							</ul>
+								{#each sellerPts as insight, i}
+									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {(buyerPts.length + i) * 50}ms; opacity: 0;">
+										<span class="category-label mb-4 block">Sellers</span>
+										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+										<div class="pt-4 border-t border-[#252525]">
+											<p class="text-[#c0c0c0] text-base leading-relaxed italic">"{insight.talkingPoint}"</p>
+										</div>
+									</div>
+								{/each}
+							</div>
 						{:else if enhancedInsights.length === 0}
-							<p class="text-[#808080] text-sm">Upload more history to unlock insights.</p>
+							<p class="text-[#808080] text-base">Upload more history to unlock insights.</p>
 						{:else}
-							<ul class="space-y-5">
-								{#each enhancedInsights.filter(i => i.priority === 'high' || i.priority === 'medium').slice(0, 4) as insight}
-									<li class="flex items-start gap-3">
-										<span class="mt-2 h-2.5 w-2.5 rounded-full flex-shrink-0
-											{insight.category === 'market_condition' ? 'bg-[#d4a853]' :
-											 insight.category === 'price' ? 'bg-blue-400' :
-											 insight.category === 'inventory' ? 'bg-purple-400' :
-											 'bg-emerald-400'}"></span>
-										<div>
-											<span class="text-white text-lg font-semibold block mb-1.5">{insight.headline}</span>
-											<span class="text-[#c4b5fd] text-sm leading-relaxed italic">{insight.agentTalkingPoint}</span>
+							<div class="space-y-4">
+								{#each enhancedInsights.filter(i => i.priority === 'high' || i.priority === 'medium').slice(0, 4) as insight, i}
+									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
+										<span class="category-label mb-4 block">{insight.category.replace('_', ' ')}</span>
+										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+										<div class="pt-4 border-t border-[#252525]">
+											<p class="text-[#c0c0c0] text-base leading-relaxed italic">{insight.agentTalkingPoint}</p>
 										</div>
-									</li>
+									</div>
 								{/each}
-							</ul>
+							</div>
 						{/if}
 					</div>
 				</div>
@@ -719,15 +731,15 @@
 
 			<!-- Sharing Section -->
 			<div class="lux-card p-6">
-				<div class="flex items-center gap-3 mb-5">
-					<div class="w-9 h-9 rounded-lg bg-[#141414] border border-[#242424] flex items-center justify-center">
-						<svg class="w-4 h-4 text-[#d4a853]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<div class="flex items-center gap-4 mb-6">
+					<div class="w-11 h-11 rounded-lg bg-[#141414] border border-[#2a2a2a] flex items-center justify-center">
+						<svg class="w-5 h-5 text-[#d4a853]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
 						</svg>
 					</div>
 					<div>
-						<h2 class="text-lg text-[#fafafa]">Share Your Dashboard</h2>
-						<p class="text-xs text-[#808080]">Generate shareable links for your clients</p>
+						<h2 class="text-xl text-[#fafafa]">Share Your Dashboard</h2>
+						<p class="text-sm text-[#a0a0a0]">Generate shareable links for your clients</p>
 					</div>
 				</div>
 
@@ -738,12 +750,12 @@
 				{/if}
 
 				{#if data.sharedLinks.length > 0}
-					<div class="space-y-2 mb-5">
+					<div class="space-y-3 mb-6">
 						{#each data.sharedLinks as link}
-							<div class="flex items-center justify-between p-4 bg-[#111111] border border-[#1f1f1f] rounded-xl group hover:border-[#282828] transition-colors">
+							<div class="flex items-center justify-between p-4 bg-[#111111] border border-[#252525] rounded-xl group hover:border-[#353535] transition-colors">
 								<div class="flex-1 min-w-0 mr-4">
-									<code class="text-xs text-[#909090] block truncate font-mono">{origin ? `${origin}/share/${link.token}` : `/share/${link.token}`}</code>
-									<p class="text-[11px] text-[#707070] mt-1">
+									<code class="text-sm text-[#b0b0b0] block truncate font-mono">{origin ? `${origin}/share/${link.token}` : `/share/${link.token}`}</code>
+									<p class="text-sm text-[#808080] mt-1">
 										Created {new Date(link.created_at).toLocaleDateString()}
 									</p>
 								</div>
@@ -751,7 +763,7 @@
 									<button
 										type="button"
 										onclick={() => copyToClipboard(link.token)}
-										class="btn-primary py-2 px-4 text-[10px]"
+										class="btn-primary py-2 px-4"
 									>
 										{copiedLink === link.token ? 'Copied!' : 'Copy Link'}
 									</button>
@@ -792,7 +804,7 @@
 					</button>
 				</form>
 
-				<p class="text-[11px] text-[#707070] mt-4">
+				<p class="text-sm text-[#909090] mt-4">
 					Anyone with the link can view your dashboard. Links don't expire.
 				</p>
 			</div>

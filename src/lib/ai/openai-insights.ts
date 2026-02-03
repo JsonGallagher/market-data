@@ -4,6 +4,7 @@ export interface AIInsight {
 	headline: string;
 	context: string;
 	talkingPoint: string;
+	audience: 'buyer' | 'seller';
 }
 
 export interface MarketSummary {
@@ -52,12 +53,14 @@ export async function generateAIInsights(summary: MarketSummary): Promise<AIInsi
 	const prompt = `Real estate market data (${summary.latestDate}):
 ${dataPoints.join(', ')}
 
-Generate 3 insights for a real estate agent. Each insight needs:
+Generate 4 insights for a real estate agent - 2 for buyer clients, 2 for seller clients.
+Each insight needs:
 1. headline (max 8 words)
 2. context (1 sentence explaining the data)
-3. talkingPoint (1 sentence the agent can say to clients)
+3. talkingPoint (1 sentence the agent can say to that client type)
+4. audience ("buyer" or "seller")
 
-Respond in JSON array format only: [{"headline":"...","context":"...","talkingPoint":"..."}]`;
+Respond in JSON array only: [{"headline":"...","context":"...","talkingPoint":"...","audience":"buyer"}]`;
 
 	try {
 		const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -76,7 +79,7 @@ Respond in JSON array format only: [{"headline":"...","context":"...","talkingPo
 					{ role: 'user', content: prompt }
 				],
 				temperature: 0.7,
-				max_tokens: 400
+				max_tokens: 500
 			})
 		});
 
@@ -97,7 +100,7 @@ Respond in JSON array format only: [{"headline":"...","context":"...","talkingPo
 		const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
 		const insights = JSON.parse(jsonStr) as AIInsight[];
 
-		return insights.slice(0, 3); // Ensure max 3 insights
+		return insights.slice(0, 4); // 2 buyer + 2 seller insights
 	} catch (error) {
 		console.error('Failed to generate AI insights:', error);
 		return [];

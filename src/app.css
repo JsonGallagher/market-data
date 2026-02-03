@@ -2,7 +2,7 @@
 @import 'tailwindcss';
 
 @theme {
-	/* Refined Luxury Dark Theme */
+	/* Refined Luxury Dark Theme - Improved Contrast */
 	--color-primary: #d4a853;
 	--color-primary-foreground: #0a0a0a;
 	--color-background: #0c0c0c;
@@ -11,8 +11,8 @@
 	--color-card: #141414;
 	--color-card-foreground: #fafafa;
 	--color-muted: #181818;
-	--color-muted-foreground: #787878;
-	--color-border: #242424;
+	--color-muted-foreground: #a0a0a0;
+	--color-border: #2a2a2a;
 	--color-input: #181818;
 	--color-ring: #d4a853;
 	--color-destructive: #ef4444;
@@ -42,7 +42,8 @@
 		@apply bg-background text-foreground antialiased;
 		font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
 		font-weight: 400;
-		line-height: 1.65;
+		font-size: 1.125rem;
+		line-height: 1.75;
 		font-feature-settings: 'kern' 1, 'liga' 1;
 	}
 
@@ -81,9 +82,9 @@
 		background: linear-gradient(135deg, #d4a853, #c99b45);
 		color: #0a0a0a;
 		font-family: 'DM Sans', sans-serif;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
-		letter-spacing: 0.14em;
+		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		border-radius: 9999px;
 		border: none;
@@ -117,14 +118,14 @@
 		gap: 0.5rem;
 		padding: 0.875rem 2rem;
 		background-color: transparent;
-		color: #e0e0e0;
+		color: #e8e8e8;
 		font-family: 'DM Sans', sans-serif;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
-		letter-spacing: 0.14em;
+		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		border-radius: 9999px;
-		border: 1px solid #333333;
+		border: 1px solid #404040;
 		cursor: pointer;
 		transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 	}
@@ -143,11 +144,11 @@
 		gap: 0.5rem;
 		padding: 0.625rem 1.25rem;
 		background-color: transparent;
-		color: #787878;
+		color: #a0a0a0;
 		font-family: 'DM Sans', sans-serif;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 500;
-		letter-spacing: 0.08em;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		border-radius: 0.5rem;
 		border: none;
@@ -190,11 +191,11 @@
 	/* Navigation link styling */
 	.nav-link {
 		font-family: 'DM Sans', sans-serif;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 500;
-		letter-spacing: 0.1em;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #b0b0b0;
+		color: #c0c0c0;
 		transition: color 0.2s ease;
 		position: relative;
 	}
@@ -210,9 +211,9 @@
 	/* Section label */
 	.section-label {
 		font-family: 'DM Sans', sans-serif;
-		font-size: 0.625rem;
+		font-size: 0.75rem;
 		font-weight: 600;
-		letter-spacing: 0.2em;
+		letter-spacing: 0.15em;
 		text-transform: uppercase;
 		color: #d4a853;
 	}
@@ -294,17 +295,17 @@
 
 	.stat-label {
 		font-family: 'DM Sans', sans-serif;
-		font-size: 0.75rem;
+		font-size: 0.875rem;
 		font-weight: 600;
-		letter-spacing: 0.08em;
-		color: #909090;
+		letter-spacing: 0.06em;
+		color: #b0b0b0;
 		text-transform: uppercase;
 		margin-bottom: 0.625rem;
 	}
 
 	.stat-value {
 		font-family: 'DM Serif Display', serif;
-		font-size: 1.875rem;
+		font-size: 2rem;
 		font-weight: 400;
 		color: #fafafa;
 		letter-spacing: -0.02em;
@@ -316,10 +317,10 @@
 		align-items: center;
 		gap: 0.25rem;
 		font-family: 'DM Sans', sans-serif;
-		font-size: 0.75rem;
+		font-size: 0.875rem;
 		font-weight: 500;
 		margin-top: 0.5rem;
-		padding: 0.25rem 0.625rem;
+		padding: 0.25rem 0.75rem;
 		border-radius: 9999px;
 	}
 
@@ -381,9 +382,9 @@
 	/* Enhanced insight card */
 	.enhanced-insight-card {
 		background: linear-gradient(145deg, #151515 0%, #111111 100%);
-		border: 1px solid #1f1f1f;
+		border: 1px solid #262626;
 		border-radius: 1rem;
-		padding: 1.25rem;
+		padding: 1.75rem;
 		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 		position: relative;
 	}
@@ -413,6 +414,20 @@
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
+	}
+
+	/* Sophisticated category label with fading background */
+	.category-label {
+		font-family: 'DM Sans', sans-serif;
+		font-size: 0.875rem;
+		font-weight: 600;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: #d4a853;
+		display: inline-block;
+		padding: 0.5rem 2rem 0.5rem 0.75rem;
+		border-radius: 0.25rem;
+		background: linear-gradient(90deg, rgba(212, 168, 83, 0.15) 0%, rgba(212, 168, 83, 0.08) 50%, transparent 100%);
 	}
 
 	/* Fade in animation */

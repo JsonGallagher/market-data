@@ -32,5 +32,9 @@
     "tailwind-variants": "^1.0.0",
     "xlsx": "^0.18.5"
   },
-  "type": "module"
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=18"
+  }
 }

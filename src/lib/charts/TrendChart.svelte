@@ -253,14 +253,14 @@
 	<!-- Header -->
 	<div class="flex items-start justify-between p-5 pb-0">
 		<div class="flex-1">
-			<h3 class="text-[13px] font-semibold tracking-wide text-[#909090] uppercase mb-1">{title}</h3>
+			<h3 class="text-sm font-semibold tracking-wide text-[#b0b0b0] uppercase mb-1">{title}</h3>
 			{#if latestValue !== null}
 				<div class="flex items-baseline gap-3">
-					<span class="text-xl font-medium text-[#fafafa] tracking-tight">
+					<span class="text-2xl font-medium text-[#fafafa] tracking-tight">
 						{formatValue(metricTypeId, latestValue)}
 					</span>
 					{#if percentChange !== null}
-						<span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full
+						<span class="inline-flex items-center gap-1 text-sm font-medium px-2.5 py-1 rounded-full
 							{percentChange >= 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-red-400 bg-red-400/10'}">
 							{#if percentChange >= 0}
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,7 +280,7 @@
 		{#if expandable}
 			<button
 				type="button"
-				class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-[11px] font-semibold tracking-wider text-[#707070] hover:text-[#d4a853] uppercase flex items-center gap-1.5"
+				class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs font-semibold tracking-wider text-[#909090] hover:text-[#d4a853] uppercase flex items-center gap-1.5"
 				onclick={openModal}
 			>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -311,7 +311,7 @@
 	<!-- Footer with date range -->
 	{#if displayRange}
 		<div class="px-5 pb-4 pt-0">
-			<p class="text-[11px] text-[#707070] tracking-wide">
+			<p class="text-sm text-[#909090] tracking-wide">
 				{displayRange.start} — {displayRange.end}
 			</p>
 		</div>

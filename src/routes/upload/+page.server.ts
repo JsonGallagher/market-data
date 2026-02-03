@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { PRIVATE_SINGLE_USER_ID } from '$env/static/private';
+import { generateAIInsights, type MarketSummary } from '$lib/ai/openai-insights';
 
 export const load: PageServerLoad = async ({ locals: { supabaseAdmin } }) => {
 	// Fetch recent import sources
@@ -167,6 +168,97 @@ export const actions: Actions = {
 			}
 		}
 
+		// Generate and cache AI insights in background (don't block response)
+		generateAndCacheInsights(supabaseAdmin).catch(err => {
+			console.error('Failed to generate AI insights:', err);
+		});
+
 		return { success: true };
 	}
 };
+
+async function generateAndCacheInsights(supabaseAdmin: any) {
+	// Fetch last 15 months of data for insights
+	const aiCutoff = new Date();
+	aiCutoff.setMonth(aiCutoff.getMonth() - 15);
+
+	const { data: metricsData } = await supabaseAdmin
+		.from('metrics')
+		.select('*')
+		.eq('user_id', PRIVATE_SINGLE_USER_ID)
+		.gte('recorded_date', aiCutoff.toISOString().split('T')[0])
+		.order('recorded_date', { ascending: false });
+
+	if (!metricsData || metricsData.length === 0) return;
+
+	// Build metrics by date map
+	const metricsByDate: Record<string, Record<string, number>> = {};
+	for (const m of metricsData) {
+		if (!metricsByDate[m.recorded_date]) {
+			metricsByDate[m.recorded_date] = {};
+		}
+		metricsByDate[m.recorded_date][m.metric_type_id] = m.value;
+	}
+
+	const sortedDates = Object.keys(metricsByDate).sort();
+	const latestDate = sortedDates[sortedDates.length - 1];
+	const latestData = metricsByDate[latestDate] || {};
+
+	// Find prior year data
+	const priorYearDate = sortedDates.find(d => {
+		const latest = new Date(latestDate);
+		const check = new Date(d);
+		return check.getFullYear() === latest.getFullYear() - 1 &&
+			check.getMonth() === latest.getMonth();
+	});
+	const priorYearData = priorYearDate ? metricsByDate[priorYearDate] : {};
+
+	const calcYoY = (current: number | null, prior: number | null) => {
+		if (current === null || prior === null || prior === 0) return null;
+		return ((current - prior) / prior) * 100;
+	};
+
+	const summary: MarketSummary = {
+		latestDate: new Date(latestDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+		medianPrice: {
+			current: latestData.median_price ?? null,
+			yoyChange: calcYoY(latestData.median_price, priorYearData.median_price)
+		},
+		averagePrice: {
+			current: latestData.average_price ?? null,
+			yoyChange: calcYoY(latestData.average_price, priorYearData.average_price)
+		},
+		salesCount: {
+			current: latestData.sales_count ?? null,
+			yoyChange: calcYoY(latestData.sales_count, priorYearData.sales_count)
+		},
+		activeListings: {
+			current: latestData.active_listings ?? null,
+			yoyChange: calcYoY(latestData.active_listings, priorYearData.active_listings)
+		},
+		daysOnMarket: {
+			current: latestData.days_on_market ?? null,
+			yoyChange: calcYoY(latestData.days_on_market, priorYearData.days_on_market)
+		},
+		monthsOfSupply: latestData.active_listings && latestData.sales_count
+			? latestData.active_listings / latestData.sales_count
+			: null,
+		pricePerSqft: {
+			current: latestData.price_per_sqft ?? null,
+			yoyChange: calcYoY(latestData.price_per_sqft, priorYearData.price_per_sqft)
+		}
+	};
+
+	const insights = await generateAIInsights(summary);
+
+	if (insights.length > 0) {
+		// Upsert cached insights
+		await supabaseAdmin
+			.from('ai_insights')
+			.upsert({
+				user_id: PRIVATE_SINGLE_USER_ID,
+				insights: insights,
+				generated_at: new Date().toISOString()
+			}, { onConflict: 'user_id' });
+	}
+}

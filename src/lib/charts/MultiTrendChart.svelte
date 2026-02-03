@@ -241,12 +241,12 @@
 	<!-- Header -->
 	<div class="flex items-start justify-between p-5 pb-2">
 		<div class="flex-1">
-			<h3 class="text-[13px] font-semibold tracking-wide text-[#909090] uppercase">{title}</h3>
+			<h3 class="text-sm font-semibold tracking-wide text-[#b0b0b0] uppercase">{title}</h3>
 		</div>
 		{#if expandable}
 			<button
 				type="button"
-				class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-[11px] font-semibold tracking-wider text-[#707070] hover:text-[#d4a853] uppercase flex items-center gap-1.5"
+				class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs font-semibold tracking-wider text-[#909090] hover:text-[#d4a853] uppercase flex items-center gap-1.5"
 				onclick={openModal}
 			>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -277,7 +277,7 @@
 	<!-- Footer with date range -->
 	{#if displayRange}
 		<div class="px-5 pb-4 pt-0">
-			<p class="text-[11px] text-[#707070] tracking-wide">
+			<p class="text-sm text-[#909090] tracking-wide">
 				{displayRange.start} — {displayRange.end}
 			</p>
 		</div>
