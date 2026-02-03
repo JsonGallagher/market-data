@@ -1,27 +1,26 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { browser } from '$app/environment';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import TrendChart from '$lib/charts/TrendChart.svelte';
 	import MultiTrendChart from '$lib/charts/MultiTrendChart.svelte';
 	import MetricCard from '$lib/charts/MetricCard.svelte';
-	import AnnotationModal from '$lib/charts/AnnotationModal.svelte';
 	import { formatValue, calculatePercentChange } from '$lib/validation';
 	import { generateEnhancedInsights, getMarketClassification, type EnhancedInsight } from '$lib/insights/enhanced-insights';
 	import { getConditionLabel, getConditionColor } from '$lib/insights/market-conditions';
-	import { buildChartAnnotations, type UserAnnotation } from '$lib/annotations/annotation-utils';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	// Date range filter
-	type DateRange = '6m' | '12m' | '24m' | 'all';
+	type DateRange = '6m' | '12m' | '24m' | '5y' | 'all';
 	const STORAGE_KEY = 'market-data-date-range';
 
 	const filterOptions: { value: DateRange; label: string; changeLabel: string }[] = [
 		{ value: '6m', label: 'Last 6 months', changeLabel: '6mo' },
 		{ value: '12m', label: 'Last 12 months', changeLabel: 'YoY' },
 		{ value: '24m', label: 'Last 2 years', changeLabel: '2yr' },
+		{ value: '5y', label: 'Last 5 years', changeLabel: '5yr' },
 		{ value: 'all', label: 'All time', changeLabel: 'total' }
 	];
 
@@ -39,7 +38,7 @@
 			const urlParams = new URLSearchParams(window.location.search);
 			if (!urlParams.has('range')) {
 				const saved = localStorage.getItem(STORAGE_KEY);
-				if (saved && ['6m', '12m', '24m', 'all'].includes(saved)) {
+				if (saved && ['6m', '12m', '24m', '5y', 'all'].includes(saved)) {
 					dateRange = saved as DateRange;
 					goto(`?range=${saved}`, { replaceState: true, noScroll: true });
 				}
@@ -117,7 +116,8 @@
 	function getDisplayName(typeId: string): string {
 		const metricType = data.metricTypes.find((t) => t.id === typeId);
 		const fallbackNames: Record<string, string> = {
-			average_price: 'Average Sale Price',
+			median_price: 'Monthly Sales Price Median',
+			average_price: 'Monthly Sales Price Average',
 			sales_count: 'Number of Sales'
 		};
 		return metricType?.display_name ?? fallbackNames[typeId] ?? typeId;
@@ -321,14 +321,20 @@
 		});
 	});
 
+	// Calculate YTD sales (all sales from current year)
+	const salesYtd = $derived.by(() => {
+		const currentYear = new Date().getFullYear();
+		return data.metrics
+			.filter(m =>
+				m.metric_type_id === 'sales_count' &&
+				new Date(m.recorded_date).getFullYear() === currentYear
+			)
+			.reduce((sum, m) => sum + m.value, 0);
+	});
+
 	let creatingLink = $state(false);
 	let copiedLink = $state<string | null>(null);
 	const origin = browser ? window.location.origin : '';
-
-	// Annotation state
-	let showAnnotationModal = $state(false);
-	let showFedRates = $state(true);
-	let showInflectionPoints = $state(true);
 
 	// Enhanced insights
 	const enhancedInsights = $derived.by(() => {
@@ -361,21 +367,6 @@
 			metricsByDate
 		});
 	});
-
-	// Build annotations for charts
-	function getAnnotationsForMetric(metricTypeId: string, metricData: { date: string; value: number }[]) {
-		const userAnnotations = (data.annotations ?? []) as UserAnnotation[];
-		return buildChartAnnotations(metricData, userAnnotations, {
-			showFedRates,
-			showInflectionPoints,
-			metricTypeId,
-			metricLabel: getDisplayName(metricTypeId)
-		});
-	}
-
-	function handleAnnotationSaved() {
-		invalidateAll();
-	}
 
 	function copyToClipboard(token: string) {
 		if (!browser) return;
@@ -466,7 +457,7 @@
 				{/if}
 			</div>
 		{:else}
-			<!-- Hero Section -->
+		<!-- Hero Section -->
 			<div class="mb-12">
 				<div class="flex items-center gap-3 mb-4">
 					<span class="section-label">Market Dashboard</span>
@@ -559,6 +550,11 @@
 								{Math.abs(item.change).toFixed(1)}% {changeLabel}
 							</span>
 						{/if}
+						{#if item.id === 'sales_count' && salesYtd > 0}
+							<div class="text-xs text-[#707070] mt-1">
+								YTD: {salesYtd.toLocaleString()}
+							</div>
+						{/if}
 					</div>
 				{/each}
 			</div>
@@ -603,44 +599,6 @@
 				<div class="flex flex-wrap items-center gap-3 mb-5">
 					<h2 class="text-xl text-[#fafafa]">Market Trends</h2>
 					<span class="h-px flex-1 bg-gradient-to-r from-[#242424] to-transparent"></span>
-
-					<!-- Annotation Controls -->
-					<div class="flex items-center gap-5">
-						<label class="flex items-center gap-2.5 cursor-pointer group">
-							<input
-								type="checkbox"
-								bind:checked={showFedRates}
-								class="sr-only peer"
-							/>
-							<div class="w-9 h-5 bg-[#252525] rounded-full peer-checked:bg-[#ef4444]/30 transition-colors relative">
-								<div class="absolute top-0.5 left-0.5 w-4 h-4 bg-[#505050] rounded-full peer-checked:bg-[#ef4444] peer-checked:translate-x-4 transition-all"></div>
-							</div>
-							<span class="text-xs text-[#808080] group-hover:text-[#a0a0a0] transition-colors">Fed Rates</span>
-						</label>
-
-						<label class="flex items-center gap-2.5 cursor-pointer group">
-							<input
-								type="checkbox"
-								bind:checked={showInflectionPoints}
-								class="sr-only peer"
-							/>
-							<div class="w-9 h-5 bg-[#252525] rounded-full peer-checked:bg-[#d4a853]/30 transition-colors relative">
-								<div class="absolute top-0.5 left-0.5 w-4 h-4 bg-[#505050] rounded-full peer-checked:bg-[#d4a853] peer-checked:translate-x-4 transition-all"></div>
-							</div>
-							<span class="text-xs text-[#808080] group-hover:text-[#a0a0a0] transition-colors">Inflections</span>
-						</label>
-
-						<button
-							type="button"
-							class="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-[#909090] hover:text-[#d4a853] bg-[#141414] border border-[#252525] hover:border-[#d4a853]/30 rounded-lg transition-colors"
-							onclick={() => showAnnotationModal = true}
-						>
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-							</svg>
-							Add Note
-						</button>
-					</div>
 				</div>
 				<div class="grid md:grid-cols-2 gap-4">
 					{#each metricOrder as typeId}
@@ -650,7 +608,6 @@
 								metricTypeId={typeId}
 								title={getDisplayName(typeId)}
 								yAxisLabel={axisLabels[typeId]?.y || ''}
-								annotations={getAnnotationsForMetric(typeId, metricsByType[typeId])}
 							/>
 						{/if}
 					{/each}
@@ -694,7 +651,6 @@
 						title="Months of Supply"
 						color="#d4a853"
 						yAxisLabel="Months"
-						annotations={getAnnotationsForMetric('months_of_supply', monthsOfSupplySeries)}
 					/>
 					<div class="chart-card p-5">
 						<h3 class="text-sm font-semibold tracking-wide text-[#909090] uppercase mb-5">Agent Talking Points</h3>
@@ -820,9 +776,3 @@
 		</div>
 	</footer>
 </div>
-
-<!-- Annotation Modal -->
-<AnnotationModal
-	bind:isOpen={showAnnotationModal}
-	onSave={handleAnnotationSaved}
-/>

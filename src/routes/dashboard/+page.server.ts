@@ -2,7 +2,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { PRIVATE_SINGLE_USER_ID } from '$env/static/private';
 
-type DateRange = '6m' | '12m' | '24m' | 'all';
+type DateRange = '6m' | '12m' | '24m' | '5y' | 'all';
 
 function getCutoffDate(range: DateRange): Date | null {
 	if (range === 'all') return null;
@@ -15,13 +15,15 @@ function getCutoffDate(range: DateRange): Date | null {
 			return new Date(now.getFullYear() - 1, now.getMonth(), 1);
 		case '24m':
 			return new Date(now.getFullYear() - 2, now.getMonth(), 1);
+		case '5y':
+			return new Date(now.getFullYear() - 5, now.getMonth(), 1);
 		default:
 			return null;
 	}
 }
 
 function isValidRange(value: string | null): value is DateRange {
-	return value === '6m' || value === '12m' || value === '24m' || value === 'all';
+	return value === '6m' || value === '12m' || value === '24m' || value === '5y' || value === 'all';
 }
 
 export const load: PageServerLoad = async ({ url, locals: { supabaseAdmin } }) => {
@@ -31,18 +33,59 @@ export const load: PageServerLoad = async ({ url, locals: { supabaseAdmin } }) =
 	const cutoffDate = getCutoffDate(range);
 
 	// Build query with optional date filter
-	let query = supabaseAdmin
+	// Supabase has a default 1000 row limit - use .range() to fetch all data
+	const PAGE_SIZE = 1000;
+	let allMetrics: any[] = [];
+	let totalCount = 0;
+	let metricsError: any = null;
+
+	// First, get the count
+	let countQuery = supabaseAdmin
 		.from('metrics')
-		.select('*')
+		.select('*', { count: 'exact', head: true })
 		.eq('user_id', PRIVATE_SINGLE_USER_ID);
 
 	if (cutoffDate) {
-		query = query.gte('recorded_date', cutoffDate.toISOString().split('T')[0]);
+		countQuery = countQuery.gte('recorded_date', cutoffDate.toISOString().split('T')[0]);
 	}
 
-	const { data: metrics, error: metricsError } = await query.order('recorded_date', {
-		ascending: false
-	});
+	const { count } = await countQuery;
+	totalCount = count ?? 0;
+
+	// Fetch all data in pages
+	let offset = 0;
+	while (offset < totalCount) {
+		let query = supabaseAdmin
+			.from('metrics')
+			.select('*')
+			.eq('user_id', PRIVATE_SINGLE_USER_ID)
+			.order('recorded_date', { ascending: false })
+			.range(offset, offset + PAGE_SIZE - 1);
+
+		if (cutoffDate) {
+			query = query.gte('recorded_date', cutoffDate.toISOString().split('T')[0]);
+		}
+
+		const { data, error } = await query;
+
+		if (error) {
+			metricsError = error;
+			break;
+		}
+
+		if (data) {
+			allMetrics = allMetrics.concat(data);
+		}
+
+		// If we got fewer rows than PAGE_SIZE, we've reached the end
+		if (!data || data.length < PAGE_SIZE) {
+			break;
+		}
+
+		offset += PAGE_SIZE;
+	}
+
+	const metrics = allMetrics;
 
 	if (metricsError) {
 		console.error('Failed to fetch metrics:', metricsError);
@@ -89,7 +132,7 @@ export const load: PageServerLoad = async ({ url, locals: { supabaseAdmin } }) =
 
 	return {
 		user: null,
-		metrics: metrics ?? [],
+		metrics,
 		metricTypes: metricTypes ?? [],
 		sharedLinks: sharedLinks ?? [],
 		annotations: annotations ?? [],

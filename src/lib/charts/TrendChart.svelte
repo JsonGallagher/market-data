@@ -8,16 +8,13 @@
 		value: number;
 	}
 
-	import type { ApexOptions } from 'apexcharts';
-
 	let {
 		data,
 		metricTypeId,
 		title,
 		color = '#d4a853',
 		expandable = true,
-		yAxisLabel = '',
-		annotations = null
+		yAxisLabel = ''
 	}: {
 		data: DataPoint[];
 		metricTypeId: string;
@@ -25,7 +22,6 @@
 		color?: string;
 		expandable?: boolean;
 		yAxisLabel?: string;
-		annotations?: ApexOptions['annotations'] | null;
 	} = $props();
 
 	let chartContainer: HTMLElement | undefined = $state();
@@ -179,8 +175,7 @@
 				y: {
 					formatter: (val: number) => formatValue(metricTypeId, val)
 				}
-			},
-			annotations: annotations ?? undefined
+			}
 		};
 	}
 
@@ -210,7 +205,6 @@
 
 	// Update chart when data changes
 	$effect(() => {
-		// Track sortedData to detect data changes
 		const currentData = sortedData;
 		if (!browser || !chartInstance || currentData.length === 0) return;
 
@@ -243,10 +237,12 @@
 
 	async function downloadChart() {
 		if (!modalChartInstance) return;
-		const { imgURI } = await modalChartInstance.dataURI();
+		const { imgURI } = await modalChartInstance.dataURI({
+			scale: 2 // 2x resolution for crisp exports
+		});
 		const link = document.createElement('a');
 		link.href = imgURI;
-		link.download = `${title.toLowerCase().replace(/\s+/g, '-')}.png`;
+		link.download = `${title.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.png`;
 		link.click();
 	}
 </script>
@@ -347,13 +343,13 @@
 				<div class="flex items-center gap-3">
 					<button
 						type="button"
-						class="flex items-center gap-1.5 text-[10px] font-medium tracking-wider text-[#505050] hover:text-[#d4a853] transition-colors uppercase"
+						class="flex items-center gap-2 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[#0a0a0a] bg-[#d4a853] hover:bg-[#e6c17a] rounded transition-colors uppercase"
 						onclick={downloadChart}
 					>
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
 						</svg>
-						Download
+						Export PNG
 					</button>
 					<div class="w-px h-4 bg-[#2a2a2a]"></div>
 					<button

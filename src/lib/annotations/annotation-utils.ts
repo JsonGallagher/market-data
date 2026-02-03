@@ -1,5 +1,5 @@
 import type { ApexOptions } from 'apexcharts';
-import { getFedEventsInRange, getFedEventColor, formatFedRateChange, type FedRateEvent } from '$lib/data/fed-rates';
+import { getFedEventsInRange, getFedEventColor, type FedRateEvent } from '$lib/data/fed-rates';
 import { detectInflectionPoints, getInflectionColor, type DataPoint, type InflectionPoint } from '$lib/insights/inflection-detector';
 
 export interface UserAnnotation {
@@ -39,11 +39,14 @@ export function buildChartAnnotations(
 	const xaxis: ApexXAxisAnnotation[] = [];
 	const points: ApexAnnotationsPoint[] = [];
 
-	// 1. Add Fed rate events
+	// 1. Add Fed rate events as point markers on the data line
 	if (config.showFedRates) {
 		const fedEvents = getFedEventsInRange(startDate, endDate);
 		for (const event of fedEvents) {
-			xaxis.push(buildFedRateAnnotation(event));
+			const fedPoint = buildFedRatePointAnnotation(event, sorted);
+			if (fedPoint) {
+				points.push(fedPoint);
+			}
 		}
 	}
 
@@ -75,33 +78,56 @@ export function buildChartAnnotations(
 	};
 }
 
-function buildFedRateAnnotation(event: FedRateEvent): ApexXAxisAnnotation {
+// Find Y value from data at or near a given date
+function findYValueAtDate(date: string, data: DataPoint[]): number | null {
+	const targetTime = new Date(date).getTime();
+
+	// First try exact match
+	const exactMatch = data.find(d => d.date === date);
+	if (exactMatch) return exactMatch.value;
+
+	// Find closest data point
+	let closest: DataPoint | null = null;
+	let closestDiff = Infinity;
+
+	for (const point of data) {
+		const pointTime = new Date(point.date).getTime();
+		const diff = Math.abs(pointTime - targetTime);
+		if (diff < closestDiff) {
+			closestDiff = diff;
+			closest = point;
+		}
+	}
+
+	// Only use if within 45 days
+	if (closest && closestDiff <= 45 * 24 * 60 * 60 * 1000) {
+		return closest.value;
+	}
+
+	return null;
+}
+
+// Build Fed rate as a point annotation (colored dot on the chart line)
+// Red = rate hike, Green = rate cut, Gray = no change
+function buildFedRatePointAnnotation(
+	event: FedRateEvent,
+	data: DataPoint[]
+): ApexAnnotationsPoint | null {
+	const yValue = findYValueAtDate(event.date, data);
+	if (yValue === null) return null;
+
 	const color = getFedEventColor(event);
-	const changeText = formatFedRateChange(event.change);
 
 	return {
 		x: new Date(`${event.date}T12:00:00`).getTime(),
-		strokeDashArray: 4,
-		borderColor: color,
-		borderWidth: 1,
-		opacity: 0.7,
-		label: {
-			text: `Fed ${changeText}`,
-			borderColor: color,
-			style: {
-				color: '#fff',
-				background: color,
-				fontSize: '10px',
-				fontWeight: 600,
-				padding: {
-					left: 6,
-					right: 6,
-					top: 3,
-					bottom: 3
-				}
-			},
-			position: 'top',
-			orientation: 'horizontal'
+		y: yValue,
+		marker: {
+			size: 5,
+			fillColor: color,
+			strokeColor: '#0c0c0c',
+			strokeWidth: 2,
+			shape: 'circle',
+			cssClass: 'fed-rate-marker'
 		}
 	};
 }

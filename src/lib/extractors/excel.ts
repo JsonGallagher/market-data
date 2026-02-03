@@ -50,8 +50,8 @@ const VALIDATION_BOUNDS: Record<string, { min: number; max: number; unit: string
 };
 
 const DISPLAY_NAMES: Record<string, string> = {
-	median_price: 'Median Sale Price',
-	average_price: 'Average Sale Price',
+	median_price: 'Monthly Sales Price Median',
+	average_price: 'Monthly Sales Price Average',
 	price_per_sqft: 'Price Per Sq Ft',
 	active_listings: 'Active Listings',
 	sales_count: 'Number of Sales',
@@ -155,10 +155,19 @@ function parseDate(value: unknown): string | null {
 			return `${isoMatch[1]}-${isoMatch[2].padStart(2, '0')}-${isoMatch[3].padStart(2, '0')}`;
 		}
 
-		// Try MM/DD/YYYY or M/D/YYYY
+		// Try MM/DD/YYYY or M/D/YYYY (4-digit year)
 		const usMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
 		if (usMatch) {
 			return `${usMatch[3]}-${usMatch[1].padStart(2, '0')}-${usMatch[2].padStart(2, '0')}`;
+		}
+
+		// Try MM/DD/YY or M/D/YY (2-digit year)
+		const usMatch2Digit = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+		if (usMatch2Digit) {
+			const shortYear = parseInt(usMatch2Digit[3], 10);
+			// Interpret 00-29 as 2000-2029, 30-99 as 1930-1999
+			const fullYear = shortYear >= 30 ? 1900 + shortYear : 2000 + shortYear;
+			return `${fullYear}-${usMatch2Digit[1].padStart(2, '0')}-${usMatch2Digit[2].padStart(2, '0')}`;
 		}
 
 		// Try Month Year format (e.g., "January 2024", "Jan 2024")
