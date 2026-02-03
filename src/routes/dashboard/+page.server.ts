@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { PRIVATE_SINGLE_USER_ID } from '$env/static/private';
+import { generateAIInsights, type MarketSummary, type AIInsight } from '$lib/ai/openai-insights';
 
 type DateRange = '6m' | '12m' | '24m' | '5y' | 'all';
 
@@ -130,6 +131,88 @@ export const load: PageServerLoad = async ({ url, locals: { supabaseAdmin } }) =
 		console.error('Failed to fetch annotations:', annotationsError);
 	}
 
+	// Generate AI insights - always fetch last 15 months for proper YoY comparison
+	let aiInsights: AIInsight[] = [];
+
+	// Fetch recent data specifically for AI insights (ensures YoY data is available)
+	const aiCutoff = new Date();
+	aiCutoff.setMonth(aiCutoff.getMonth() - 15);
+
+	const { data: aiMetricsData } = await supabaseAdmin
+		.from('metrics')
+		.select('*')
+		.eq('user_id', PRIVATE_SINGLE_USER_ID)
+		.gte('recorded_date', aiCutoff.toISOString().split('T')[0])
+		.order('recorded_date', { ascending: false });
+
+	const aiMetrics = aiMetricsData ?? [];
+
+	if (aiMetrics.length > 0) {
+		// Build metrics by date map
+		const metricsByDate: Record<string, Record<string, number>> = {};
+		for (const m of aiMetrics) {
+			if (!metricsByDate[m.recorded_date]) {
+				metricsByDate[m.recorded_date] = {};
+			}
+			metricsByDate[m.recorded_date][m.metric_type_id] = m.value;
+		}
+
+		const sortedDates = Object.keys(metricsByDate).sort();
+		const latestDate = sortedDates[sortedDates.length - 1];
+		const latestData = metricsByDate[latestDate] || {};
+
+		// Find prior year data for YoY calculations
+		const priorYearDate = sortedDates.find(d => {
+			const latest = new Date(latestDate);
+			const check = new Date(d);
+			return check.getFullYear() === latest.getFullYear() - 1 &&
+				check.getMonth() === latest.getMonth();
+		});
+		const priorYearData = priorYearDate ? metricsByDate[priorYearDate] : {};
+
+		const calcYoY = (current: number | null, prior: number | null) => {
+			if (current === null || prior === null || prior === 0) return null;
+			return ((current - prior) / prior) * 100;
+		};
+
+		const summary: MarketSummary = {
+			latestDate: new Date(latestDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+			medianPrice: {
+				current: latestData.median_price ?? null,
+				yoyChange: calcYoY(latestData.median_price, priorYearData.median_price)
+			},
+			averagePrice: {
+				current: latestData.average_price ?? null,
+				yoyChange: calcYoY(latestData.average_price, priorYearData.average_price)
+			},
+			salesCount: {
+				current: latestData.sales_count ?? null,
+				yoyChange: calcYoY(latestData.sales_count, priorYearData.sales_count)
+			},
+			activeListings: {
+				current: latestData.active_listings ?? null,
+				yoyChange: calcYoY(latestData.active_listings, priorYearData.active_listings)
+			},
+			daysOnMarket: {
+				current: latestData.days_on_market ?? null,
+				yoyChange: calcYoY(latestData.days_on_market, priorYearData.days_on_market)
+			},
+			monthsOfSupply: latestData.active_listings && latestData.sales_count
+				? latestData.active_listings / latestData.sales_count
+				: null,
+			pricePerSqft: {
+				current: latestData.price_per_sqft ?? null,
+				yoyChange: calcYoY(latestData.price_per_sqft, priorYearData.price_per_sqft)
+			}
+		};
+
+		try {
+			aiInsights = await generateAIInsights(summary);
+		} catch (error) {
+			console.error('Failed to generate AI insights:', error);
+		}
+	}
+
 	return {
 		user: null,
 		metrics,
@@ -137,7 +220,8 @@ export const load: PageServerLoad = async ({ url, locals: { supabaseAdmin } }) =
 		sharedLinks: sharedLinks ?? [],
 		annotations: annotations ?? [],
 		range,
-		lastImport: lastImport ?? null
+		lastImport: lastImport ?? null,
+		aiInsights
 	};
 };
 

@@ -559,8 +559,36 @@
 				{/each}
 			</div>
 
-			<!-- Key Insights (Enhanced) -->
-			{#if enhancedInsights.length > 0}
+			<!-- AI-Powered Insights -->
+			{#if data.aiInsights && data.aiInsights.length > 0}
+				<div class="lux-card p-6 mb-10">
+					<div class="flex items-center justify-between mb-5">
+						<div class="flex items-center gap-3">
+							<h2 class="text-xl text-[#fafafa]">Key Insights</h2>
+							<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30">
+								<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+									<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+								</svg>
+								AI-Powered
+							</span>
+						</div>
+						<span class="text-[11px] text-[#808080] uppercase tracking-wider">as of {latestLabel}</span>
+					</div>
+					<div class="grid md:grid-cols-3 gap-4">
+						{#each data.aiInsights as insight, i}
+							<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
+								<h4 class="text-white text-lg font-semibold mb-3">{insight.headline}</h4>
+								<p class="text-[#b8b8b8] text-sm leading-relaxed mb-4">{insight.context}</p>
+								<div class="pt-3 border-t border-[#1f1f1f]">
+									<p class="text-[10px] text-[#606060] uppercase tracking-wider mb-1.5">Client Talking Point</p>
+									<p class="text-[#c4b5fd] text-sm leading-relaxed italic">"{insight.talkingPoint}"</p>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{:else if enhancedInsights.length > 0}
+				<!-- Fallback to rule-based insights -->
 				<div class="lux-card p-6 mb-10">
 					<div class="flex items-center justify-between mb-5">
 						<h2 class="text-xl text-[#fafafa]">Key Insights</h2>
@@ -654,7 +682,19 @@
 					/>
 					<div class="chart-card p-5">
 						<h3 class="text-sm font-semibold tracking-wide text-[#909090] uppercase mb-5">Agent Talking Points</h3>
-						{#if enhancedInsights.length === 0}
+						{#if data.aiInsights && data.aiInsights.length > 0}
+							<ul class="space-y-5">
+								{#each data.aiInsights as insight}
+									<li class="flex items-start gap-3">
+										<span class="mt-2 h-2.5 w-2.5 rounded-full flex-shrink-0 bg-emerald-400"></span>
+										<div>
+											<span class="text-white text-lg font-semibold block mb-1.5">{insight.headline}</span>
+											<span class="text-[#c4b5fd] text-sm leading-relaxed italic">"{insight.talkingPoint}"</span>
+										</div>
+									</li>
+								{/each}
+							</ul>
+						{:else if enhancedInsights.length === 0}
 							<p class="text-[#808080] text-sm">Upload more history to unlock insights.</p>
 						{:else}
 							<ul class="space-y-5">
