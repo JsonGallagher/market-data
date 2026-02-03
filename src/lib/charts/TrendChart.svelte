@@ -249,7 +249,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="chart-card group">
+<div class="chart-card group h-full">
 	<!-- Header -->
 	<div class="flex items-start justify-between p-5 pb-0">
 		<div class="flex-1">

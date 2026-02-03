@@ -8,6 +8,7 @@
 	import { formatValue, calculatePercentChange } from '$lib/validation';
 	import { generateEnhancedInsights, getMarketClassification, type EnhancedInsight } from '$lib/insights/enhanced-insights';
 	import { getConditionLabel, getConditionColor } from '$lib/insights/market-conditions';
+	import { FadeIn, StaggerContainer, StaggerItem, CountUp, ScaleOnHover } from '$lib/components/animations';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -530,8 +531,8 @@
 
 			<!-- Key Metrics Grid -->
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-10">
-				{#each pulseItems as item, i}
-					<div class="stat-card animate-fade-in-up" style="animation-delay: {i * 75}ms; opacity: 0;">
+				{#each pulseItems as item}
+					<div class="stat-card">
 						<p class="stat-label">{item.label}</p>
 						<p class="stat-value">
 							{item.current !== null ? formatValue(item.id, item.current) : '—'}
@@ -563,175 +564,213 @@
 			{#if data.aiInsights && data.aiInsights.length > 0}
 				{@const buyerInsights = data.aiInsights.filter(i => i.audience === 'buyer')}
 				{@const sellerInsights = data.aiInsights.filter(i => i.audience === 'seller')}
-				<div class="lux-card p-8 mb-10">
-					<div class="flex items-center justify-between mb-8">
-						<h2 class="text-2xl text-[#fafafa]">Key Insights</h2>
-						<span class="text-sm text-[#707070] uppercase tracking-wider">as of {latestLabel}</span>
-					</div>
-
-					<div class="grid lg:grid-cols-2 gap-6">
-						<!-- Buyer Insights -->
-						<div>
-							<p class="text-sm text-[#808080] uppercase tracking-wider mb-5 font-medium">For Buyers</p>
-							<div class="space-y-5">
-								{#each buyerInsights as insight, i}
-									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
-										<span class="category-label mb-4 block">Buyers</span>
-										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
-										<p class="text-[#a0a0a0] text-lg leading-relaxed mb-4">{insight.context}</p>
-										<div class="pt-4 border-t border-[#252525]">
-											<p class="text-[#c0c0c0] text-lg leading-relaxed italic">"{insight.talkingPoint}"</p>
-										</div>
-									</div>
-								{/each}
-							</div>
+				<FadeIn y={30} duration={0.6}>
+					<div class="lux-card p-8 mb-10">
+						<div class="flex items-center justify-between mb-8">
+							<h2 class="text-2xl text-[#fafafa]">Key Insights</h2>
+							<span class="text-sm text-[#707070] uppercase tracking-wider">as of {latestLabel}</span>
 						</div>
 
-						<!-- Seller Insights -->
-						<div>
-							<p class="text-sm text-[#808080] uppercase tracking-wider mb-5 font-medium">For Sellers</p>
-							<div class="space-y-5">
-								{#each sellerInsights as insight, i}
-									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
-										<span class="category-label mb-4 block">Sellers</span>
-										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
-										<p class="text-[#a0a0a0] text-lg leading-relaxed mb-4">{insight.context}</p>
-										<div class="pt-4 border-t border-[#252525]">
-											<p class="text-[#c0c0c0] text-lg leading-relaxed italic">"{insight.talkingPoint}"</p>
-										</div>
-									</div>
-								{/each}
+						<div class="grid lg:grid-cols-2 gap-6">
+							<!-- Buyer Insights -->
+							<div>
+								<p class="text-sm text-[#808080] uppercase tracking-wider mb-5 font-medium">For Buyers</p>
+								<StaggerContainer class="space-y-5" staggerDelay={0.12} delayStart={0.1}>
+									{#each buyerInsights as insight}
+										<StaggerItem>
+											<ScaleOnHover scale={1.01} y={-2}>
+												<div class="enhanced-insight-card">
+													<span class="category-label mb-4 block">Buyers</span>
+													<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+													<p class="text-[#a0a0a0] text-lg leading-relaxed mb-4">{insight.context}</p>
+													<div class="pt-4 border-t border-[#252525]">
+														<p class="text-[#c0c0c0] text-lg leading-relaxed italic">"{insight.talkingPoint}"</p>
+													</div>
+												</div>
+											</ScaleOnHover>
+										</StaggerItem>
+									{/each}
+								</StaggerContainer>
+							</div>
+
+							<!-- Seller Insights -->
+							<div>
+								<p class="text-sm text-[#808080] uppercase tracking-wider mb-5 font-medium">For Sellers</p>
+								<StaggerContainer class="space-y-5" staggerDelay={0.12} delayStart={0.2}>
+									{#each sellerInsights as insight}
+										<StaggerItem>
+											<ScaleOnHover scale={1.01} y={-2}>
+												<div class="enhanced-insight-card">
+													<span class="category-label mb-4 block">Sellers</span>
+													<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+													<p class="text-[#a0a0a0] text-lg leading-relaxed mb-4">{insight.context}</p>
+													<div class="pt-4 border-t border-[#252525]">
+														<p class="text-[#c0c0c0] text-lg leading-relaxed italic">"{insight.talkingPoint}"</p>
+													</div>
+												</div>
+											</ScaleOnHover>
+										</StaggerItem>
+									{/each}
+								</StaggerContainer>
 							</div>
 						</div>
 					</div>
-				</div>
+				</FadeIn>
 			{:else if enhancedInsights.length > 0}
 				<!-- Fallback to rule-based insights -->
-				<div class="lux-card p-6 mb-10">
-					<div class="flex items-center justify-between mb-5">
-						<h2 class="text-xl text-[#fafafa]">Key Insights</h2>
-						<span class="text-[11px] text-[#808080] uppercase tracking-wider">as of {latestLabel}</span>
+				<FadeIn y={30} duration={0.6}>
+					<div class="lux-card p-6 mb-10">
+						<div class="flex items-center justify-between mb-5">
+							<h2 class="text-xl text-[#fafafa]">Key Insights</h2>
+							<span class="text-[11px] text-[#808080] uppercase tracking-wider">as of {latestLabel}</span>
+						</div>
+						<StaggerContainer class="grid md:grid-cols-2 gap-4" staggerDelay={0.1}>
+							{#each enhancedInsights as insight}
+								<StaggerItem>
+									<ScaleOnHover scale={1.01} y={-2}>
+										<div class="enhanced-insight-card h-full">
+											<span class="category-label mb-4 block">
+												{insight.category.replace('_', ' ')}
+											</span>
+											<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
+											<p class="text-[#a0a0a0] text-base leading-relaxed mb-4">{insight.context}</p>
+											<div class="pt-4 border-t border-[#252525]">
+												<p class="text-[#c0c0c0] text-base leading-relaxed italic">{insight.agentTalkingPoint}</p>
+											</div>
+										</div>
+									</ScaleOnHover>
+								</StaggerItem>
+							{/each}
+						</StaggerContainer>
 					</div>
-					<div class="grid md:grid-cols-2 gap-4">
-						{#each enhancedInsights as insight, i}
-							<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
-								<span class="category-label mb-4 block">
-									{insight.category.replace('_', ' ')}
-								</span>
-								<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
-								<p class="text-[#a0a0a0] text-base leading-relaxed mb-4">{insight.context}</p>
-								<div class="pt-4 border-t border-[#252525]">
-									<p class="text-[#c0c0c0] text-base leading-relaxed italic">{insight.agentTalkingPoint}</p>
-								</div>
-							</div>
-						{/each}
-					</div>
-				</div>
+				</FadeIn>
 			{/if}
 
 			<!-- Charts Section -->
-			<div class="mb-10">
-				<div class="flex flex-wrap items-center gap-3 mb-6">
-					<h2 class="text-2xl text-[#fafafa]">Market Trends</h2>
-					<span class="h-px flex-1 bg-gradient-to-r from-[#303030] to-transparent"></span>
+			<FadeIn y={30} duration={0.6}>
+				<div class="mb-10">
+					<div class="flex flex-wrap items-center gap-3 mb-6">
+						<h2 class="text-2xl text-[#fafafa]">Market Trends</h2>
+						<span class="h-px flex-1 bg-gradient-to-r from-[#303030] to-transparent"></span>
+					</div>
+					<StaggerContainer class="grid md:grid-cols-2 gap-4" staggerDelay={0.08}>
+						{#each metricOrder as typeId}
+							{#if metricsByType[typeId] && metricsByType[typeId].length > 0}
+								<StaggerItem>
+									<TrendChart
+										data={metricsByType[typeId]}
+										metricTypeId={typeId}
+										title={getDisplayName(typeId)}
+										yAxisLabel={axisLabels[typeId]?.y || ''}
+									/>
+								</StaggerItem>
+							{/if}
+						{/each}
+					</StaggerContainer>
 				</div>
-				<div class="grid md:grid-cols-2 gap-4">
-					{#each metricOrder as typeId}
-						{#if metricsByType[typeId] && metricsByType[typeId].length > 0}
-							<TrendChart
-								data={metricsByType[typeId]}
-								metricTypeId={typeId}
-								title={getDisplayName(typeId)}
-								yAxisLabel={axisLabels[typeId]?.y || ''}
-							/>
-						{/if}
-					{/each}
-				</div>
-			</div>
+			</FadeIn>
 
 			<!-- Market Intelligence -->
-			<div class="lux-card p-6 mb-10">
-				<div class="mb-6">
-					<h2 class="text-2xl text-[#fafafa] mb-2">Market Intelligence</h2>
-					<p class="text-[#b0b0b0] text-base">
-						Layered analysis to help explain the story behind the numbers.
-					</p>
-				</div>
-
-				<div class="grid lg:grid-cols-2 gap-4 mb-6">
-					<MultiTrendChart
-						title="Median vs Average Price"
-						series={[
-							{ name: 'Median', values: seriesFor('median_price'), color: '#d4a853' },
-							{ name: 'Average', values: seriesFor('average_price'), color: '#5b8def' }
-						]}
-						tooltipFormatter={(value) => formatValue('average_price', value)}
-						yAxisLabel="Price ($)"
-					/>
-					<MultiTrendChart
-						title="Sales vs Active Inventory"
-						series={[
-							{ name: 'Sales', values: seriesFor('sales_count'), color: '#34d399' },
-							{ name: 'Active Listings', values: seriesFor('active_listings'), color: '#a78bfa' }
-						]}
-						tooltipFormatter={(value) => formatValue('active_listings', value)}
-						yAxisLabel="Count"
-					/>
-				</div>
-
-				<div class="grid lg:grid-cols-2 gap-4">
-					<TrendChart
-						data={monthsOfSupplySeries}
-						metricTypeId="months_of_supply"
-						title="Months of Supply"
-						color="#d4a853"
-						yAxisLabel="Months"
-					/>
-					<div class="chart-card p-6">
-						<h3 class="text-base font-semibold tracking-wide text-[#909090] uppercase mb-6">Agent Talking Points</h3>
-						{#if data.aiInsights && data.aiInsights.length > 0}
-							{@const buyerPts = data.aiInsights.filter(i => i.audience === 'buyer')}
-							{@const sellerPts = data.aiInsights.filter(i => i.audience === 'seller')}
-							<div class="space-y-4">
-								{#each buyerPts as insight, i}
-									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
-										<span class="category-label mb-4 block">Buyers</span>
-										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
-										<div class="pt-4 border-t border-[#252525]">
-											<p class="text-[#c0c0c0] text-base leading-relaxed italic">"{insight.talkingPoint}"</p>
-										</div>
-									</div>
-								{/each}
-								{#each sellerPts as insight, i}
-									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {(buyerPts.length + i) * 50}ms; opacity: 0;">
-										<span class="category-label mb-4 block">Sellers</span>
-										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
-										<div class="pt-4 border-t border-[#252525]">
-											<p class="text-[#c0c0c0] text-base leading-relaxed italic">"{insight.talkingPoint}"</p>
-										</div>
-									</div>
-								{/each}
-							</div>
-						{:else if enhancedInsights.length === 0}
-							<p class="text-[#808080] text-base">Upload more history to unlock insights.</p>
-						{:else}
-							<div class="space-y-4">
-								{#each enhancedInsights.filter(i => i.priority === 'high' || i.priority === 'medium').slice(0, 4) as insight, i}
-									<div class="enhanced-insight-card animate-fade-in" style="animation-delay: {i * 50}ms; opacity: 0;">
-										<span class="category-label mb-4 block">{insight.category.replace('_', ' ')}</span>
-										<h4 class="text-[#fafafa] text-xl font-semibold mb-3">{insight.headline}</h4>
-										<div class="pt-4 border-t border-[#252525]">
-											<p class="text-[#c0c0c0] text-base leading-relaxed italic">{insight.agentTalkingPoint}</p>
-										</div>
-									</div>
-								{/each}
-							</div>
-						{/if}
+			<FadeIn y={30} duration={0.6}>
+				<div class="lux-card p-6 mb-10">
+					<div class="mb-6">
+						<h2 class="text-2xl text-[#fafafa] mb-2">Market Intelligence</h2>
+						<p class="text-[#b0b0b0] text-base">
+							Layered analysis to help explain the story behind the numbers.
+						</p>
 					</div>
+
+					<!-- Median vs Average Price - Full Width Hero Chart -->
+					<FadeIn y={20} duration={0.5} class="mb-6">
+						<MultiTrendChart
+							title="Median vs Average Price"
+							series={[
+								{ name: 'Median', values: seriesFor('median_price'), color: '#d4a853' },
+								{ name: 'Average', values: seriesFor('average_price'), color: '#5b8def' }
+							]}
+							tooltipFormatter={(value) => formatValue('average_price', value)}
+							yAxisLabel="Price ($)"
+						/>
+					</FadeIn>
+
+					<!-- Secondary Charts Grid -->
+					<StaggerContainer class="grid lg:grid-cols-2 gap-4" staggerDelay={0.15}>
+						<StaggerItem>
+							<MultiTrendChart
+								title="Sales vs Active Inventory"
+								series={[
+									{ name: 'Sales', values: seriesFor('sales_count'), color: '#34d399' },
+									{ name: 'Active Listings', values: seriesFor('active_listings'), color: '#a78bfa' }
+								]}
+								tooltipFormatter={(value) => formatValue('active_listings', value)}
+								yAxisLabel="Count"
+							/>
+						</StaggerItem>
+						<StaggerItem>
+							<TrendChart
+								data={monthsOfSupplySeries}
+								metricTypeId="months_of_supply"
+								title="Months of Supply"
+								color="#d4a853"
+								yAxisLabel="Months"
+							/>
+						</StaggerItem>
+					</StaggerContainer>
+
+					<!-- Agent Talking Points - Horizontal Grid -->
+					{#if data.aiInsights && data.aiInsights.length > 0}
+						{@const buyerPts = data.aiInsights.filter(i => i.audience === 'buyer')}
+						{@const sellerPts = data.aiInsights.filter(i => i.audience === 'seller')}
+						<div class="mt-6">
+							<h3 class="text-base font-semibold tracking-wide text-[#909090] uppercase mb-4">Agent Talking Points</h3>
+							<StaggerContainer class="grid md:grid-cols-2 lg:grid-cols-4 gap-4" staggerDelay={0.08}>
+								{#each buyerPts.slice(0, 2) as insight}
+									<StaggerItem>
+										<ScaleOnHover scale={1.01} y={-2}>
+											<div class="enhanced-insight-card h-full">
+												<span class="category-label mb-3 block">Buyers</span>
+												<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{insight.headline}</h4>
+												<p class="text-[#a0a0a0] text-sm leading-relaxed italic">"{insight.talkingPoint}"</p>
+											</div>
+										</ScaleOnHover>
+									</StaggerItem>
+								{/each}
+								{#each sellerPts.slice(0, 2) as insight}
+									<StaggerItem>
+										<ScaleOnHover scale={1.01} y={-2}>
+											<div class="enhanced-insight-card h-full">
+												<span class="category-label mb-3 block">Sellers</span>
+												<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{insight.headline}</h4>
+												<p class="text-[#a0a0a0] text-sm leading-relaxed italic">"{insight.talkingPoint}"</p>
+											</div>
+										</ScaleOnHover>
+									</StaggerItem>
+								{/each}
+							</StaggerContainer>
+						</div>
+					{:else if enhancedInsights.length > 0}
+						<div class="mt-6">
+							<h3 class="text-base font-semibold tracking-wide text-[#909090] uppercase mb-4">Agent Talking Points</h3>
+							<StaggerContainer class="grid md:grid-cols-2 lg:grid-cols-4 gap-4" staggerDelay={0.08}>
+								{#each enhancedInsights.filter(i => i.priority === 'high' || i.priority === 'medium').slice(0, 4) as insight}
+									<StaggerItem>
+										<ScaleOnHover scale={1.01} y={-2}>
+											<div class="enhanced-insight-card h-full">
+												<span class="category-label mb-3 block">{insight.category.replace('_', ' ')}</span>
+												<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{insight.headline}</h4>
+												<p class="text-[#a0a0a0] text-sm leading-relaxed italic">{insight.agentTalkingPoint}</p>
+											</div>
+										</ScaleOnHover>
+									</StaggerItem>
+								{/each}
+							</StaggerContainer>
+						</div>
+					{/if}
 				</div>
-			</div>
+			</FadeIn>
 
 			<!-- Sharing Section -->
+			<FadeIn y={30} duration={0.6}>
 			<div class="lux-card p-6">
 				<div class="flex items-center gap-4 mb-6">
 					<div class="w-11 h-11 rounded-lg bg-[#141414] border border-[#2a2a2a] flex items-center justify-center">
@@ -810,6 +849,7 @@
 					Anyone with the link can view your dashboard. Links don't expire.
 				</p>
 			</div>
+			</FadeIn>
 		{/if}
 	</main>
 
