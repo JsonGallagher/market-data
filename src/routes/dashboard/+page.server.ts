@@ -4,7 +4,7 @@ import { PRIVATE_SINGLE_USER_ID } from '$env/static/private';
 import type { AIInsight, AIMarketClassification } from '$lib/ai/openai-insights';
 import { requireAuth } from '$lib/server/auth';
 
-type DateRange = '6m' | '12m' | '24m' | '5y' | 'all';
+type DateRange = '6m' | '12m' | '24m' | '5y' | 'all' | 'custom';
 
 function getCutoffDate(range: DateRange): Date | null {
 	if (range === 'all') return null;
@@ -25,7 +25,7 @@ function getCutoffDate(range: DateRange): Date | null {
 }
 
 function isValidRange(value: string | null): value is DateRange {
-	return value === '6m' || value === '12m' || value === '24m' || value === '5y' || value === 'all';
+	return value === '6m' || value === '12m' || value === '24m' || value === '5y' || value === 'all' || value === 'custom';
 }
 
 export const load: PageServerLoad = async (event) => {

@@ -9,13 +9,16 @@
 	import { generateEnhancedInsights, getMarketClassification, type EnhancedInsight } from '$lib/insights/enhanced-insights';
 	import { getConditionLabel, getConditionColor } from '$lib/insights/market-conditions';
 	import { FadeIn, StaggerContainer, StaggerItem, CountUp, ScaleOnHover } from '$lib/components/animations';
+	import DateRangePopover from '$lib/components/DateRangePopover.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	// Date range filter
-	type DateRange = '6m' | '12m' | '24m' | '5y' | 'all';
+	type DateRange = '6m' | '12m' | '24m' | '5y' | 'all' | 'custom';
 	const STORAGE_KEY = 'market-data-date-range';
+	const CUSTOM_START_KEY = 'market-data-custom-start';
+	const CUSTOM_END_KEY = 'market-data-custom-end';
 
 	const filterOptions: { value: DateRange; label: string; changeLabel: string }[] = [
 		{ value: '6m', label: 'Last 6 months', changeLabel: '6mo' },
@@ -27,47 +30,133 @@
 
 	// Initialize from URL param or localStorage
 	let dateRange = $state<DateRange>((data.range as DateRange) || '12m');
+	let customStartDate = $state<string | null>(null);
+	let customEndDate = $state<string | null>(null);
 
-	// On mount, check localStorage for saved preference
+	// On mount, check URL params first, then localStorage for saved preference
 	$effect(() => {
 		if (browser) {
-			const saved = localStorage.getItem(STORAGE_KEY);
-			if (saved && ['6m', '12m', '24m', '5y', 'all'].includes(saved)) {
-				dateRange = saved as DateRange;
+			const url = new URL(window.location.href);
+			const urlRange = url.searchParams.get('range');
+			const urlStart = url.searchParams.get('start');
+			const urlEnd = url.searchParams.get('end');
+
+			// URL params take precedence (for bookmarked/shared links)
+			if (urlRange === 'custom' && urlStart && urlEnd) {
+				dateRange = 'custom';
+				customStartDate = urlStart;
+				customEndDate = urlEnd;
+				localStorage.setItem(STORAGE_KEY, 'custom');
+				localStorage.setItem(CUSTOM_START_KEY, urlStart);
+				localStorage.setItem(CUSTOM_END_KEY, urlEnd);
+			} else {
+				// Fall back to localStorage
+				const saved = localStorage.getItem(STORAGE_KEY);
+				if (saved && ['6m', '12m', '24m', '5y', 'all', 'custom'].includes(saved)) {
+					dateRange = saved as DateRange;
+					if (saved === 'custom') {
+						customStartDate = localStorage.getItem(CUSTOM_START_KEY);
+						customEndDate = localStorage.getItem(CUSTOM_END_KEY);
+						// If custom dates are missing, fall back to 12m
+						if (!customStartDate || !customEndDate) {
+							dateRange = '12m';
+							localStorage.setItem(STORAGE_KEY, '12m');
+						}
+					}
+				}
 			}
 		}
 	});
 
 	function handleRangeChange(newRange: DateRange) {
 		dateRange = newRange;
+		// Clear custom dates when switching to a preset
+		if (newRange !== 'custom') {
+			customStartDate = null;
+			customEndDate = null;
+		}
 		if (browser) {
 			localStorage.setItem(STORAGE_KEY, newRange);
+			if (newRange !== 'custom') {
+				localStorage.removeItem(CUSTOM_START_KEY);
+				localStorage.removeItem(CUSTOM_END_KEY);
+			}
 			// Update URL without navigation for bookmarking
 			const url = new URL(window.location.href);
 			url.searchParams.set('range', newRange);
+			if (newRange !== 'custom') {
+				url.searchParams.delete('start');
+				url.searchParams.delete('end');
+			}
 			window.history.replaceState({}, '', url);
 		}
 	}
 
-	// Get cutoff date for client-side filtering
-	function getCutoffDate(range: DateRange): Date | null {
-		if (range === 'all') return null;
-		const now = new Date();
-		switch (range) {
-			case '6m': return new Date(now.getFullYear(), now.getMonth() - 6, 1);
-			case '12m': return new Date(now.getFullYear() - 1, now.getMonth(), 1);
-			case '24m': return new Date(now.getFullYear() - 2, now.getMonth(), 1);
-			case '5y': return new Date(now.getFullYear() - 5, now.getMonth(), 1);
-			default: return null;
+	function handleCustomRangeApply(start: string, end: string) {
+		customStartDate = start;
+		customEndDate = end;
+		dateRange = 'custom';
+		if (browser) {
+			localStorage.setItem(STORAGE_KEY, 'custom');
+			localStorage.setItem(CUSTOM_START_KEY, start);
+			localStorage.setItem(CUSTOM_END_KEY, end);
+			// Update URL for bookmarking
+			const url = new URL(window.location.href);
+			url.searchParams.set('range', 'custom');
+			url.searchParams.set('start', start);
+			url.searchParams.set('end', end);
+			window.history.replaceState({}, '', url);
 		}
+	}
+
+	function handleCustomRangeClear() {
+		customStartDate = null;
+		customEndDate = null;
+		dateRange = '12m';
+		if (browser) {
+			localStorage.setItem(STORAGE_KEY, '12m');
+			localStorage.removeItem(CUSTOM_START_KEY);
+			localStorage.removeItem(CUSTOM_END_KEY);
+			const url = new URL(window.location.href);
+			url.searchParams.set('range', '12m');
+			url.searchParams.delete('start');
+			url.searchParams.delete('end');
+			window.history.replaceState({}, '', url);
+		}
+	}
+
+	// Get date filter boundaries for client-side filtering
+	function getDateFilter(range: DateRange): { start: Date | null; end: Date | null } {
+		if (range === 'all') return { start: null, end: null };
+		if (range === 'custom' && customStartDate && customEndDate) {
+			return {
+				start: new Date(customStartDate + 'T00:00:00'),
+				end: new Date(customEndDate + 'T23:59:59')
+			};
+		}
+		const now = new Date();
+		let start: Date | null = null;
+		switch (range) {
+			case '6m': start = new Date(now.getFullYear(), now.getMonth() - 6, 1); break;
+			case '12m': start = new Date(now.getFullYear() - 1, now.getMonth(), 1); break;
+			case '24m': start = new Date(now.getFullYear() - 2, now.getMonth(), 1); break;
+			case '5y': start = new Date(now.getFullYear() - 5, now.getMonth(), 1); break;
+			default: start = null;
+		}
+		return { start, end: null };
 	}
 
 	// Filter metrics client-side based on selected date range
 	const filteredMetrics = $derived.by(() => {
-		const cutoff = getCutoffDate(dateRange);
-		if (!cutoff) return data.metrics;
-		const cutoffStr = cutoff.toISOString().split('T')[0];
-		return data.metrics.filter(m => m.recorded_date >= cutoffStr);
+		const { start, end } = getDateFilter(dateRange);
+		if (!start && !end) return data.metrics;
+		const startStr = start ? start.toISOString().split('T')[0] : null;
+		const endStr = end ? end.toISOString().split('T')[0] : null;
+		return data.metrics.filter(m => {
+			if (startStr && m.recorded_date < startStr) return false;
+			if (endStr && m.recorded_date > endStr) return false;
+			return true;
+		});
 	});
 
 	// Format relative time for last import
@@ -315,7 +404,7 @@
 
 	// Get change label for the current date range
 	const changeLabel = $derived(
-		filterOptions.find((opt) => opt.value === dateRange)?.changeLabel ?? 'change'
+		dateRange === 'custom' ? 'range' : (filterOptions.find((opt) => opt.value === dateRange)?.changeLabel ?? 'change')
 	);
 
 	const pulseItems = $derived.by(() => {
@@ -511,6 +600,14 @@
 								{opt.label}
 							</button>
 						{/each}
+						<span class="w-px h-6 bg-[#252525] mx-1"></span>
+						<DateRangePopover
+							isActive={dateRange === 'custom'}
+							startDate={customStartDate}
+							endDate={customEndDate}
+							onApply={handleCustomRangeApply}
+							onClear={handleCustomRangeClear}
+						/>
 					</div>
 				</div>
 
