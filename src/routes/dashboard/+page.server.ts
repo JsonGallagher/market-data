@@ -32,46 +32,34 @@ export const load: PageServerLoad = async (event) => {
 	requireAuth(event);
 	const { url, locals: { supabaseAdmin } } = event;
 
-	// Get date range from URL param, default to 12 months
+	// Get initial date range from URL param (for bookmarking/sharing), default to 12 months
+	// All data is loaded and filtered client-side for instant filtering
 	const rangeParam = url.searchParams.get('range');
 	const range: DateRange = isValidRange(rangeParam) ? rangeParam : '12m';
-	const cutoffDate = getCutoffDate(range);
 
-	// Build query with optional date filter
+	// Load ALL metrics once - client will filter by date range
 	// Supabase has a default 1000 row limit - use .range() to fetch all data
 	const PAGE_SIZE = 1000;
 	let allMetrics: any[] = [];
-	let totalCount = 0;
 	let metricsError: any = null;
 
 	// First, get the count
-	let countQuery = supabaseAdmin
+	const { count } = await supabaseAdmin
 		.from('metrics')
 		.select('*', { count: 'exact', head: true })
 		.eq('user_id', PRIVATE_SINGLE_USER_ID);
 
-	if (cutoffDate) {
-		countQuery = countQuery.gte('recorded_date', cutoffDate.toISOString().split('T')[0]);
-	}
-
-	const { count } = await countQuery;
-	totalCount = count ?? 0;
+	const totalCount = count ?? 0;
 
 	// Fetch all data in pages
 	let offset = 0;
 	while (offset < totalCount) {
-		let query = supabaseAdmin
+		const { data, error } = await supabaseAdmin
 			.from('metrics')
 			.select('*')
 			.eq('user_id', PRIVATE_SINGLE_USER_ID)
 			.order('recorded_date', { ascending: false })
 			.range(offset, offset + PAGE_SIZE - 1);
-
-		if (cutoffDate) {
-			query = query.gte('recorded_date', cutoffDate.toISOString().split('T')[0]);
-		}
-
-		const { data, error } = await query;
 
 		if (error) {
 			metricsError = error;

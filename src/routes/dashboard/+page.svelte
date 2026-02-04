@@ -25,23 +25,50 @@
 		{ value: 'all', label: 'All time', changeLabel: 'total' }
 	];
 
-	// Initialize from server data (server defaults to '12m' if no URL param)
-	let dateRange = $state<DateRange>(data.range as DateRange);
+	// Initialize from URL param or localStorage
+	let dateRange = $state<DateRange>((data.range as DateRange) || '12m');
 
-	// Sync with server data when it changes (e.g., navigation)
+	// On mount, check localStorage for saved preference
 	$effect(() => {
-		if (data.range !== dateRange) {
-			dateRange = data.range as DateRange;
+		if (browser) {
+			const saved = localStorage.getItem(STORAGE_KEY);
+			if (saved && ['6m', '12m', '24m', '5y', 'all'].includes(saved)) {
+				dateRange = saved as DateRange;
+			}
 		}
 	});
 
-	async function handleRangeChange(newRange: DateRange) {
+	function handleRangeChange(newRange: DateRange) {
 		dateRange = newRange;
 		if (browser) {
 			localStorage.setItem(STORAGE_KEY, newRange);
+			// Update URL without navigation for bookmarking
+			const url = new URL(window.location.href);
+			url.searchParams.set('range', newRange);
+			window.history.replaceState({}, '', url);
 		}
-		await goto(`?range=${newRange}`, { replaceState: true, noScroll: true, invalidateAll: true });
 	}
+
+	// Get cutoff date for client-side filtering
+	function getCutoffDate(range: DateRange): Date | null {
+		if (range === 'all') return null;
+		const now = new Date();
+		switch (range) {
+			case '6m': return new Date(now.getFullYear(), now.getMonth() - 6, 1);
+			case '12m': return new Date(now.getFullYear() - 1, now.getMonth(), 1);
+			case '24m': return new Date(now.getFullYear() - 2, now.getMonth(), 1);
+			case '5y': return new Date(now.getFullYear() - 5, now.getMonth(), 1);
+			default: return null;
+		}
+	}
+
+	// Filter metrics client-side based on selected date range
+	const filteredMetrics = $derived.by(() => {
+		const cutoff = getCutoffDate(dateRange);
+		if (!cutoff) return data.metrics;
+		const cutoffStr = cutoff.toISOString().split('T')[0];
+		return data.metrics.filter(m => m.recorded_date >= cutoffStr);
+	});
 
 	// Format relative time for last import
 	function formatLastImport(dateStr: string | null): string {
@@ -66,7 +93,7 @@
 	const metricsByType = $derived.by(() => {
 		const grouped: Record<string, Array<{ date: string; value: number }>> = {};
 
-		for (const metric of data.metrics) {
+		for (const metric of filteredMetrics) {
 			if (!grouped[metric.metric_type_id]) {
 				grouped[metric.metric_type_id] = [];
 			}
@@ -136,11 +163,11 @@
 		list_to_sale_ratio: { y: 'Ratio (%)', x: 'Date' }
 	};
 
-	const hasData = $derived(data.metrics.length > 0);
+	const hasData = $derived(filteredMetrics.length > 0);
 
 	const metricsByDate = $derived.by(() => {
 		const map: Record<string, Record<string, number>> = {};
-		for (const metric of data.metrics) {
+		for (const metric of filteredMetrics) {
 			if (!map[metric.recorded_date]) {
 				map[metric.recorded_date] = {};
 			}
@@ -175,7 +202,7 @@
 	}
 
 	const latestDate = $derived.by(() => {
-		const dates = data.metrics
+		const dates = filteredMetrics
 			.map((metric) => metric.recorded_date)
 			.filter(Boolean)
 			.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
@@ -341,19 +368,8 @@
 		});
 	});
 
-	// Market classification for badge - prefer AI classification, fall back to rules
+	// Market classification for badge - use deterministic rules for consistency
 	const marketClassification = $derived.by(() => {
-		// Use AI classification if available
-		if (data.aiMarketCondition) {
-			return {
-				condition: data.aiMarketCondition.condition,
-				confidence: data.aiMarketCondition.confidence,
-				reasoning: data.aiMarketCondition.reasoning,
-				factors: [] // AI doesn't provide factor breakdown
-			};
-		}
-
-		// Fall back to rule-based classification
 		const latest = latestDate;
 		if (!latest) return null;
 
@@ -509,7 +525,7 @@
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
 						</svg>
-						{data.metrics.length} metrics
+						{filteredMetrics.length} metrics
 					</span>
 					<span class="inline-flex items-center gap-2 px-4 py-2 bg-[#d4a853]/10 border border-[#d4a853]/30 rounded-full text-[#d4a853] font-medium">
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
