@@ -187,19 +187,54 @@ export const actions: Actions = {
 	}
 };
 
-async function generateAndCacheInsights(supabaseAdmin: any) {
-	// Fetch last 15 months of data for insights
-	const aiCutoff = new Date();
-	aiCutoff.setMonth(aiCutoff.getMonth() - 15);
+type DateRange = '6m' | '12m' | '24m' | '5y' | 'all';
 
-	const { data: metricsData } = await supabaseAdmin
+function getCutoffDate(range: DateRange): Date | null {
+	if (range === 'all') return null;
+
+	const now = new Date();
+	switch (range) {
+		case '6m':
+			return new Date(now.getFullYear(), now.getMonth() - 6, 1);
+		case '12m':
+			return new Date(now.getFullYear() - 1, now.getMonth(), 1);
+		case '24m':
+			return new Date(now.getFullYear() - 2, now.getMonth(), 1);
+		case '5y':
+			return new Date(now.getFullYear() - 5, now.getMonth(), 1);
+		default:
+			return null;
+	}
+}
+
+async function generateAndCacheInsights(supabaseAdmin: any) {
+	console.log('[AI Insights] Starting generation...');
+
+	// Fetch all data for insights generation
+	const { data: allMetricsData } = await supabaseAdmin
 		.from('metrics')
 		.select('*')
 		.eq('user_id', PRIVATE_SINGLE_USER_ID)
-		.gte('recorded_date', aiCutoff.toISOString().split('T')[0])
 		.order('recorded_date', { ascending: false });
 
-	if (!metricsData || metricsData.length === 0) return;
+	if (!allMetricsData || allMetricsData.length === 0) {
+		console.log('[AI Insights] No metrics data found');
+		return;
+	}
+
+	console.log(`[AI Insights] Found ${allMetricsData.length} metrics`);
+
+	// Generate insights only for 12 months - this provides the best balance of
+	// recency and trend data for actionable real estate insights
+	const range: DateRange = '12m';
+	const cutoffDate = getCutoffDate(range);
+
+	// Filter metrics for 12 month range
+	const metricsData = cutoffDate
+		? allMetricsData.filter((m: any) => new Date(m.recorded_date) >= cutoffDate)
+		: allMetricsData;
+
+	if (metricsData.length === 0) return;
 
 	// Build metrics by date map
 	const metricsByDate: Record<string, Record<string, number>> = {};
@@ -214,16 +249,13 @@ async function generateAndCacheInsights(supabaseAdmin: any) {
 	const latestDate = sortedDates[sortedDates.length - 1];
 	const latestData = metricsByDate[latestDate] || {};
 
-	// Find prior year data
-	const priorYearDate = sortedDates.find(d => {
-		const latest = new Date(latestDate);
-		const check = new Date(d);
-		return check.getFullYear() === latest.getFullYear() - 1 &&
-			check.getMonth() === latest.getMonth();
-	});
-	const priorYearData = priorYearDate ? metricsByDate[priorYearDate] : {};
+	// For YoY comparison, find the date from 12 months ago
+	const priorYearDate = new Date(latestDate);
+	priorYearDate.setFullYear(priorYearDate.getFullYear() - 1);
+	const priorYearStr = priorYearDate.toISOString().split('T')[0];
+	const priorYearData = metricsByDate[priorYearStr] || metricsByDate[sortedDates[0]] || {};
 
-	const calcYoY = (current: number | null, prior: number | null) => {
+	const calcChange = (current: number | null, prior: number | null) => {
 		if (current === null || prior === null || prior === 0) return null;
 		return ((current - prior) / prior) * 100;
 	};
@@ -232,44 +264,54 @@ async function generateAndCacheInsights(supabaseAdmin: any) {
 		latestDate: new Date(latestDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
 		medianPrice: {
 			current: latestData.median_price ?? null,
-			yoyChange: calcYoY(latestData.median_price, priorYearData.median_price)
+			yoyChange: calcChange(latestData.median_price, priorYearData.median_price)
 		},
 		averagePrice: {
 			current: latestData.average_price ?? null,
-			yoyChange: calcYoY(latestData.average_price, priorYearData.average_price)
+			yoyChange: calcChange(latestData.average_price, priorYearData.average_price)
 		},
 		salesCount: {
 			current: latestData.sales_count ?? null,
-			yoyChange: calcYoY(latestData.sales_count, priorYearData.sales_count)
+			yoyChange: calcChange(latestData.sales_count, priorYearData.sales_count)
 		},
 		activeListings: {
 			current: latestData.active_listings ?? null,
-			yoyChange: calcYoY(latestData.active_listings, priorYearData.active_listings)
+			yoyChange: calcChange(latestData.active_listings, priorYearData.active_listings)
 		},
 		daysOnMarket: {
 			current: latestData.days_on_market ?? null,
-			yoyChange: calcYoY(latestData.days_on_market, priorYearData.days_on_market)
+			yoyChange: calcChange(latestData.days_on_market, priorYearData.days_on_market)
 		},
 		monthsOfSupply: latestData.active_listings && latestData.sales_count
 			? latestData.active_listings / latestData.sales_count
 			: null,
 		pricePerSqft: {
 			current: latestData.price_per_sqft ?? null,
-			yoyChange: calcYoY(latestData.price_per_sqft, priorYearData.price_per_sqft)
+			yoyChange: calcChange(latestData.price_per_sqft, priorYearData.price_per_sqft)
 		}
 	};
 
 	const result = await generateAIInsights(summary);
 
+	console.log(`[AI Insights] Generated ${result.insights.length} insights`);
+	console.log('[AI Insights] targetAudience values:', result.insights.map(i => i.targetAudience));
+
 	if (result.insights.length > 0 || result.marketCondition) {
-		// Upsert cached insights and market condition
-		await supabaseAdmin
+		// Cache insights for the 12m range
+		const { error: upsertError } = await supabaseAdmin
 			.from('ai_insights')
 			.upsert({
 				user_id: PRIVATE_SINGLE_USER_ID,
+				date_range: range,
 				insights: result.insights,
 				market_condition: result.marketCondition,
 				generated_at: new Date().toISOString()
-			}, { onConflict: 'user_id' });
+			}, { onConflict: 'user_id,date_range' });
+
+		if (upsertError) {
+			console.error('[AI Insights] Failed to cache:', upsertError);
+		} else {
+			console.log('[AI Insights] Successfully cached insights');
+		}
 	}
 }

@@ -563,10 +563,11 @@
 			{#if data.aiInsights && data.aiInsights.length > 0}
 				<FadeIn y={30} duration={0.6}>
 					<div class="lux-card p-8 mb-10">
-						<div class="flex items-center justify-between mb-8">
+						<div class="flex items-center justify-between mb-2">
 							<h2 class="text-2xl text-[#fafafa]">Key Insights</h2>
 							<span class="text-sm text-[#707070] uppercase tracking-wider">as of {latestLabel}</span>
 						</div>
+						<p class="text-sm text-[#606060] mb-8">Based on 12 months of market data for year-over-year accuracy</p>
 
 						<StaggerContainer class="grid md:grid-cols-2 gap-5 items-stretch" staggerDelay={0.1}>
 							{#each data.aiInsights as insight}
@@ -613,10 +614,11 @@
 				<!-- Fallback to rule-based insights -->
 				<FadeIn y={30} duration={0.6}>
 					<div class="lux-card p-8 mb-10">
-						<div class="flex items-center justify-between mb-8">
+						<div class="flex items-center justify-between mb-2">
 							<h2 class="text-2xl text-[#fafafa]">Key Insights</h2>
 							<span class="text-sm text-[#707070] uppercase tracking-wider">as of {latestLabel}</span>
 						</div>
+						<p class="text-sm text-[#606060] mb-8">Based on 12 months of market data for year-over-year accuracy</p>
 						<StaggerContainer class="grid md:grid-cols-2 gap-5 items-stretch" staggerDelay={0.1}>
 							{#each enhancedInsights as insight}
 								<StaggerItem class="h-full">
@@ -736,6 +738,13 @@
 
 			<!-- Agent Talking Points - Separate Section at Bottom -->
 			{#if data.aiInsights && data.aiInsights.length > 0}
+				{@const hasTargetAudience = data.aiInsights.some(i => i.targetAudience)}
+				{@const buyerInsights = hasTargetAudience
+					? data.aiInsights.filter(i => i.targetAudience === 'buyer').slice(0, 2)
+					: data.aiInsights.filter((_, idx) => idx % 2 === 0).slice(0, 2)}
+				{@const sellerInsights = hasTargetAudience
+					? data.aiInsights.filter(i => i.targetAudience === 'seller').slice(0, 2)
+					: data.aiInsights.filter((_, idx) => idx % 2 === 1).slice(0, 2)}
 				<FadeIn y={30} duration={0.6}>
 					<div class="lux-card p-6 mb-10">
 						<div class="flex items-center gap-4 mb-6">
@@ -749,19 +758,42 @@
 								<p class="text-sm text-[#a0a0a0]">Ready-to-use phrases for client conversations</p>
 							</div>
 						</div>
-						<StaggerContainer class="grid md:grid-cols-2 gap-4 items-stretch" staggerDelay={0.08}>
-							{#each data.aiInsights as insight}
-								<StaggerItem class="h-full">
-									<ScaleOnHover scale={1.01} y={-2} class="h-full">
-										<div class="enhanced-insight-card h-full flex flex-col">
-											<span class="category-label mb-3">{(insight.category ?? 'insight').replace('_', ' ')}</span>
-											<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{insight.headline}</h4>
-											<p class="text-[#c0c0c0] text-base leading-relaxed italic mt-auto">"{insight.talkingPoint}"</p>
-										</div>
-									</ScaleOnHover>
-								</StaggerItem>
+						<!-- Column Headers -->
+						<div class="grid md:grid-cols-2 gap-6 mb-4">
+							<div class="flex items-center gap-2.5">
+								<svg class="w-4 h-4 text-[#fafafa]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+								</svg>
+								<h3 class="text-xs font-semibold text-[#fafafa] uppercase" style="font-family: system-ui, -apple-system, sans-serif;">For Buyers</h3>
+							</div>
+							<div class="flex items-center gap-2.5">
+								<svg class="w-4 h-4 text-[#fafafa]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+								<h3 class="text-xs font-semibold text-[#fafafa] uppercase" style="font-family: system-ui, -apple-system, sans-serif;">For Sellers</h3>
+							</div>
+						</div>
+						<!-- Cards Grid - Each row aligns -->
+						<div class="grid md:grid-cols-2 gap-4">
+							{#each { length: Math.max(buyerInsights.length, sellerInsights.length) } as _, i}
+								{@const buyerInsight = buyerInsights[i]}
+								{@const sellerInsight = sellerInsights[i]}
+								<!-- Buyer Card -->
+								<div class="enhanced-insight-card">
+									{#if buyerInsight}
+										<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{buyerInsight.headline}</h4>
+										<p class="text-[#c0c0c0] text-base leading-relaxed italic">"{buyerInsight.talkingPoint}"</p>
+									{/if}
+								</div>
+								<!-- Seller Card -->
+								<div class="enhanced-insight-card">
+									{#if sellerInsight}
+										<h4 class="text-[#fafafa] text-lg font-semibold mb-2">{sellerInsight.headline}</h4>
+										<p class="text-[#c0c0c0] text-base leading-relaxed italic">"{sellerInsight.talkingPoint}"</p>
+									{/if}
+								</div>
 							{/each}
-						</StaggerContainer>
+						</div>
 					</div>
 				</FadeIn>
 			{:else if enhancedInsights.length > 0}

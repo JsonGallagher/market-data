@@ -4,8 +4,9 @@ export interface AIInsight {
 	headline: string;
 	context: string;
 	talkingPoint: string;
-	category: 'price' | 'inventory' | 'velocity' | 'market_condition';
+	category: 'price' | 'inventory' | 'velocity' | 'market_condition' | 'affordability' | 'opportunity';
 	sentiment: 'positive' | 'negative' | 'neutral';
+	targetAudience?: 'buyer' | 'seller';
 }
 
 export type MarketCondition = 'sellers' | 'buyers' | 'balanced';
@@ -74,15 +75,20 @@ Analyze this data and provide:
    Provide confidence: "high", "medium", or "low".
    Give a brief reasoning (1 sentence).
 
-2. INSIGHTS: Generate exactly 4 insights by category for a real estate agent to discuss with clients.
-   Categories: "price" (pricing trends), "inventory" (supply/listings), "velocity" (sales pace/DOM), "market_condition" (overall market state).
-   Each insight needs: headline (max 8 words), context (1 sentence explaining the data), talkingPoint (1 sentence the agent can say to clients), category, sentiment.
+2. INSIGHTS: Generate exactly 4 insights for a real estate agent to discuss with clients.
+   Categories: "price" (pricing trends), "inventory" (supply/listings), "velocity" (sales pace/DOM), "market_condition" (overall market state), "affordability" (buyer purchasing power, price-to-income), "opportunity" (actionable advice for buyers or sellers based on current conditions).
+   Each insight needs: headline (max 8 words), context (1 sentence explaining the data), talkingPoint (1 sentence the agent can say to clients), category, sentiment, targetAudience.
    Sentiment: "positive" (good news, growth, favorable), "negative" (concerning, declining, unfavorable), or "neutral" (stable, balanced, informational).
+   targetAudience: "buyer" or "seller" - who the agent would share this insight WITH. The talkingPoint must be relevant to that audience.
+     - "buyer" = advice for people LOOKING TO PURCHASE a home. Topics: price trends favoring buyers, inventory giving more choices, negotiation power, affordability windows.
+     - "seller" = advice for people LOOKING TO LIST/SELL their home. Topics: optimal listing price, time on market expectations, competition from other sellers, when to list, staging/pricing strategies.
+     IMPORTANT: Each talkingPoint must clearly help that specific audience make decisions. Generate exactly 2 for buyers and 2 for sellers.
+   Make insights actionable and specific - agents need concrete talking points for client conversations.
 
 Respond in JSON only:
 {
   "marketCondition": {"condition": "sellers|buyers|balanced", "confidence": "high|medium|low", "reasoning": "..."},
-  "insights": [{"headline":"...","context":"...","talkingPoint":"...","category":"price|inventory|velocity|market_condition","sentiment":"positive|negative|neutral"}]
+  "insights": [{"headline":"...","context":"...","talkingPoint":"...","category":"price|inventory|velocity|market_condition|affordability|opportunity","sentiment":"positive|negative|neutral","targetAudience":"buyer|seller"}]
 }`;
 
 	try {
@@ -102,7 +108,7 @@ Respond in JSON only:
 					{ role: 'user', content: prompt }
 				],
 				temperature: 0.7,
-				max_tokens: 700
+				max_tokens: 800
 			})
 		});
 

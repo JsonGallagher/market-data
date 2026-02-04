@@ -135,13 +135,15 @@ export const load: PageServerLoad = async (event) => {
 		console.error('Failed to fetch annotations:', annotationsError);
 	}
 
-	// Fetch cached AI insights and market condition (generated on import, not live)
+	// Fetch cached AI insights and market condition (always use 12m for consistent insights)
+	// Insights are generated once on import based on 12 months of data for best accuracy
 	let aiInsights: AIInsight[] = [];
 	let aiMarketCondition: AIMarketClassification | null = null;
 	const { data: cachedInsights } = await supabaseAdmin
 		.from('ai_insights')
 		.select('insights, market_condition, generated_at')
 		.eq('user_id', PRIVATE_SINGLE_USER_ID)
+		.eq('date_range', '12m')
 		.single();
 
 	if (cachedInsights?.insights) {
