@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
+	import { exportChartAsImage } from './chartExport';
 
 	interface SeriesPoint {
 		date: string;
@@ -29,10 +30,12 @@
 
 	let chartContainer: HTMLElement | undefined = $state();
 	let modalChartContainer: HTMLElement | undefined = $state();
+	let exportContainer: HTMLElement | undefined = $state();
 	let isOpen = $state(false);
 	let chartInstance = $state<any>(null);
 	let modalChartInstance = $state<any>(null);
 	let displayRange = $state<{ start: string; end: string } | null>(null);
+	let isExporting = $state(false);
 
 	// Track series data for reactivity
 	const seriesData = $derived(series.map(s => s.values));
@@ -224,14 +227,27 @@
 	}
 
 	async function downloadChart() {
-		if (!modalChartInstance) return;
-		const { imgURI } = await modalChartInstance.dataURI({
-			scale: 2 // 2x resolution for crisp exports
+		if (!exportContainer || isExporting) return;
+		isExporting = true;
+		try {
+			await exportChartAsImage(exportContainer, {
+				scale: 3,
+				filename: title.toLowerCase().replace(/\s+/g, '-')
+			});
+		} finally {
+			isExporting = false;
+		}
+	}
+
+	function getExportTimestamp(): string {
+		return new Date().toLocaleString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric',
+			hour: 'numeric',
+			minute: '2-digit',
+			hour12: true
 		});
-		const link = document.createElement('a');
-		link.href = imgURI;
-		link.download = `${title.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.png`;
-		link.click();
 	}
 </script>
 
@@ -301,6 +317,7 @@
 		<div class="modal-content">
 			<div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d4a853]/30 to-transparent"></div>
 
+			<!-- Modal header with controls (not part of export) -->
 			<div class="flex items-center justify-between p-6 border-b border-[#1f1f1f]">
 				<div>
 					<h3 class="text-lg text-[#fafafa] font-medium">{title}</h3>
@@ -311,13 +328,22 @@
 				<div class="flex items-center gap-3">
 					<button
 						type="button"
-						class="flex items-center gap-2 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[#0a0a0a] bg-[#d4a853] hover:bg-[#e6c17a] rounded transition-colors uppercase"
+						class="flex items-center gap-2 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[#0a0a0a] bg-[#d4a853] hover:bg-[#e6c17a] rounded transition-colors uppercase disabled:opacity-50"
 						onclick={downloadChart}
+						disabled={isExporting}
 					>
-						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-						</svg>
-						Export PNG
+						{#if isExporting}
+							<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							</svg>
+							Exporting...
+						{:else}
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+							</svg>
+							Export PNG
+						{/if}
 					</button>
 					<div class="w-px h-4 bg-[#2a2a2a]"></div>
 					<button
@@ -333,8 +359,30 @@
 				</div>
 			</div>
 
-			<div class="p-6">
-				<div bind:this={modalChartContainer} class="w-full"></div>
+			<!-- Export Container - this is what gets captured as PNG -->
+			<div bind:this={exportContainer} class="export-container">
+				<!-- Gold accent line at top -->
+				<div class="export-accent"></div>
+
+				<!-- Header with title and date range -->
+				<div class="export-header">
+					<div>
+						<h3 class="export-title">{title}</h3>
+						{#if displayRange}
+							<p class="export-date-range">{displayRange.start} — {displayRange.end}</p>
+						{/if}
+					</div>
+				</div>
+
+				<!-- Chart area -->
+				<div class="export-chart-area">
+					<div bind:this={modalChartContainer} class="w-full"></div>
+				</div>
+
+				<!-- Footer with timestamp -->
+				<div class="export-footer">
+					<p class="export-timestamp">Generated {getExportTimestamp()}</p>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -368,6 +416,59 @@
 		max-height: 90vh;
 		overflow: hidden;
 		animation: modalIn 250ms cubic-bezier(0.16, 1, 0.3, 1);
+	}
+
+	/* Export container styles */
+	.export-container {
+		background: linear-gradient(180deg, #161616 0%, #111111 100%);
+		border-radius: 1rem;
+		overflow: hidden;
+		font-family: 'DM Sans', sans-serif;
+	}
+
+	.export-accent {
+		height: 2px;
+		background: linear-gradient(90deg, transparent, rgba(212, 168, 83, 0.4), transparent);
+	}
+
+	.export-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		padding: 1.5rem 1.5rem 0.5rem;
+	}
+
+	.export-title {
+		font-size: 1.125rem;
+		font-weight: 500;
+		color: #fafafa;
+		margin: 0;
+	}
+
+	.export-date-range {
+		font-size: 0.75rem;
+		color: #505050;
+		margin-top: 0.25rem;
+	}
+
+	.export-chart-area {
+		background: #0c0c0c;
+		margin: 1rem 1.5rem;
+		border-radius: 0.75rem;
+		padding: 1rem;
+		border: 1px solid #1a1a1a;
+	}
+
+	.export-footer {
+		padding: 0.75rem 1.5rem;
+		border-top: 1px solid #1f1f1f;
+	}
+
+	.export-timestamp {
+		font-size: 0.625rem;
+		color: #404040;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 	}
 
 	@keyframes modalIn {

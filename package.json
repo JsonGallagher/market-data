@@ -27,6 +27,7 @@
     "apexcharts": "^5.3.6",
     "bits-ui": "^1.0.0",
     "clsx": "^2.1.0",
+    "html2canvas": "^1.4.1",
     "supabase": "^2.74.5",
     "svelte-motion": "^0.12.2",
     "tailwind-merge": "^2.6.0",
