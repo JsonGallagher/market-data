@@ -5,17 +5,23 @@ A modern real estate analytics dashboard for agents to visualize market trends, 
 ## Features
 
 ### Dashboard & Visualization
-- **Interactive Charts**: Track median price, average price, sales volume, active listings, days on market, and price per square foot with smooth, animated ApexCharts
-- **Multi-metric Comparisons**: Overlay charts comparing median vs average price, sales vs inventory
-- **Date Range Filtering**: View data across 6 months, 1 year, 2 years, 5 years, or all time
-- **Key Metrics Cards**: At-a-glance stats with period-over-period change indicators
-- **Market Condition Badge**: Visual indicator showing buyer's, seller's, or balanced market
+- **Interactive Charts**: Track median price, average price, sales volume, active listings, days on market, price per square foot, months of supply, and list-to-sale ratio with smooth, animated ApexCharts
+- **Multi-metric Comparisons**: Overlay charts comparing median vs average price, sales vs active inventory
+- **Date Range Filtering**: View data across 6 months, 1 year, 2 years, 5 years, all time, or custom date ranges
+- **Key Metrics Cards**: At-a-glance stats with period-over-period change indicators and YTD sales tracking
+- **Market Condition Badge**: Visual indicator showing buyer's, seller's, or balanced market conditions
+- **Chart Export**: Expand any chart and export as high-resolution PNG for presentations and reports
+
+### Chart Intelligence
+- **Fed Rate Overlay**: Visualize Federal Reserve interest rate changes directly on your price charts to understand macro market impacts
+- **Inflection Point Detection**: Automatic identification of market peaks, troughs, acceleration, and deceleration points
+- **Custom Annotations**: Add your own annotations to mark local events, market milestones, or noteworthy data points
 
 ### AI-Powered Insights
 - **GPT-4o-mini Integration**: Automatically generates market insights from your data
 - **Smart Classification**: AI determines market conditions with confidence levels
 - **Sentiment Analysis**: Each insight tagged as positive, negative, or neutral with visual indicators
-- **Agent Talking Points**: Ready-to-use phrases for client conversations
+- **Agent Talking Points**: Ready-to-use phrases for client conversations, split by buyer and seller audiences
 - **Fallback System**: Rule-based insights when AI is unavailable, with seasonal pattern analysis
 
 ### Data Import
@@ -27,13 +33,15 @@ A modern real estate analytics dashboard for agents to visualize market trends, 
 
 ### Sharing
 - **Shareable Links**: Generate unique URLs to share your dashboard with clients
+- **Date Range Preservation**: Shared links preserve your selected date range for consistent reporting
 - **No Expiration**: Links remain active indefinitely
 - **Read-only Access**: Clients see the same beautiful dashboard without edit capabilities
 
 ### Design
 - **Dark Theme**: Premium dark UI with gold accents
 - **Smooth Animations**: Fade-in, stagger, scale-on-hover, and count-up animations
-- **Responsive Layout**: Optimized for desktop and mobile viewing
+- **Fully Responsive**: Optimized for desktop, tablet, and mobile viewing with adaptive layouts
+- **Skeleton Loading**: Polished loading states during data hydration
 - **Luxurious Aesthetic**: Designed to impress clients with a high-end look
 
 ## Tech Stack
@@ -42,15 +50,17 @@ A modern real estate analytics dashboard for agents to visualize market trends, 
 |----------|------------|
 | Framework | [SvelteKit 2](https://kit.svelte.dev/) with [Svelte 5](https://svelte.dev/) |
 | Language | TypeScript |
-| Styling | [Tailwind CSS 4](https://tailwindcss.com/) |
+| Styling | [Tailwind CSS 4](https://tailwindcss.com/) with tailwind-merge & tailwind-variants |
+| UI Components | [Bits UI](https://bits-ui.com/) |
 | Database | [Supabase](https://supabase.com/) (PostgreSQL) |
 | Authentication | Supabase Auth |
 | AI | [OpenAI API](https://platform.openai.com/) (GPT-4o-mini) |
-| Charts | [ApexCharts](https://apexcharts.com/) |
+| Charts | [ApexCharts 5](https://apexcharts.com/) |
+| Chart Export | [html2canvas](https://html2canvas.hertzen.com/) |
 | Animations | [svelte-motion](https://github.com/micha-lmxt/svelte-motion) |
 | Excel Parsing | [SheetJS (xlsx)](https://sheetjs.com/) |
-| Deployment | [Cloudflare Pages](https://pages.cloudflare.com/) |
-| Package Manager | pnpm |
+| Deployment | [Cloudflare Pages](https://pages.cloudflare.com/) with Workers |
+| Package Manager | pnpm 9+ |
 
 ## Prerequisites
 
@@ -172,18 +182,26 @@ The app will be available at `http://localhost:5173`.
 ```
 src/
 ├── lib/
-│   ├── ai/
-│   │   └── openai-insights.ts    # AI insight generation
+│   ├── annotations/
+│   │   └── annotation-utils.ts   # Chart annotation helpers
 │   ├── charts/
-│   │   ├── TrendChart.svelte     # Single metric line chart
+│   │   ├── TrendChart.svelte     # Single metric area chart with export
 │   │   ├── MultiTrendChart.svelte # Multi-series comparison chart
-│   │   └── MetricCard.svelte     # Stat card component
+│   │   ├── MetricCard.svelte     # Stat card component
+│   │   ├── Modal.svelte          # Reusable modal component
+│   │   ├── AnnotationModal.svelte # Custom annotation editor
+│   │   └── chartExport.ts        # PNG export utilities
 │   ├── components/
-│   │   └── animations/           # Motion components
+│   │   ├── animations/           # Motion components (FadeIn, CountUp, etc.)
+│   │   ├── DateRangePopover.svelte # Custom date range picker
+│   │   └── SkeletonCard.svelte   # Loading skeleton states
+│   ├── data/
+│   │   └── fed-rates.ts          # Federal Reserve rate history
 │   ├── extractors/
 │   │   └── excel.ts              # Excel/CSV parsing logic
 │   ├── insights/
 │   │   ├── enhanced-insights.ts  # Rule-based insight generation
+│   │   ├── inflection-detector.ts # Peak/trough detection algorithms
 │   │   ├── market-conditions.ts  # Market classification logic
 │   │   └── seasonal-patterns.ts  # Seasonal comparison data
 │   ├── database.types.ts         # Supabase type definitions
@@ -201,7 +219,7 @@ src/
 │   │   └── +page.svelte          # Public shared dashboard
 │   └── auth/
 │       └── login/                # Authentication
-└── app.css                       # Global styles
+└── app.css                       # Global styles & Tailwind config
 ```
 
 ## Scripts
