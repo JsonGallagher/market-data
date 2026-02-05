@@ -2,10 +2,11 @@
 
 A modern real estate analytics dashboard for agents to visualize market trends, generate AI-powered insights, and share beautiful reports with clients.
 
-<details>
-<summary><strong>Screenshots</strong></summary>
-
 ![Landing Page](previews/1-Dashboard_Landing_Page.png)
+
+<details>
+<summary><strong>Additional Screenshots</strong></summary>
+
 ![Dashboard Overview](previews/2-Dashboard_Preview.png)
 ![Key Insights](previews/3-Dashboard_Preview.png)
 ![Market Trends](previews/4-Dashboard_Preview.png)
