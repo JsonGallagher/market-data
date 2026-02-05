@@ -88,31 +88,33 @@
 			aria-label="Close"
 		></button>
 
-		<div class="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-1/4 sm:top-full sm:mt-2 z-50 bg-[#141414] border border-[#252525] rounded-xl shadow-2xl p-5 sm:p-4 sm:w-[280px] max-w-[calc(100vw-2rem)]">
+		<div class="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-1/4 sm:top-full sm:mt-2 z-50 bg-[#141414] border border-[#252525] rounded-xl shadow-2xl p-5 sm:p-4 sm:w-[280px] overflow-hidden">
 			<h3 class="text-sm font-semibold text-[#fafafa] mb-4">Custom Date Range</h3>
 
-			<div class="space-y-3">
-				<div>
+			<div class="space-y-3 overflow-hidden">
+				<div class="overflow-hidden">
 					<label for="date-range-start" class="block text-xs text-[#808080] mb-1.5">From</label>
 					<input
 						id="date-range-start"
 						type="date"
 						bind:value={tempStart}
+						style="max-width: 100%; box-sizing: border-box;"
 						class="w-full px-3 py-2.5 bg-[#0a0a0a] border border-[#252525] rounded-lg text-[#fafafa] text-base sm:text-sm
 							focus:outline-none focus:border-[#d4a853] focus:ring-1 focus:ring-[#d4a853]/20
-							[color-scheme:dark]"
+							[color-scheme:dark] [-webkit-appearance:none] [appearance:none]"
 					/>
 				</div>
 
-				<div>
+				<div class="overflow-hidden">
 					<label for="date-range-end" class="block text-xs text-[#808080] mb-1.5">To</label>
 					<input
 						id="date-range-end"
 						type="date"
 						bind:value={tempEnd}
+						style="max-width: 100%; box-sizing: border-box;"
 						class="w-full px-3 py-2.5 bg-[#0a0a0a] border border-[#252525] rounded-lg text-[#fafafa] text-base sm:text-sm
 							focus:outline-none focus:border-[#d4a853] focus:ring-1 focus:ring-[#d4a853]/20
-							[color-scheme:dark]"
+							[color-scheme:dark] [-webkit-appearance:none] [appearance:none]"
 					/>
 				</div>
 

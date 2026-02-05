@@ -618,6 +618,15 @@
 	font-weight: 500 !important;
 }
 
+/* Fix date inputs on iOS */
+input[type="date"] {
+	-webkit-appearance: none;
+	appearance: none;
+	min-width: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
 	width: 8px;
