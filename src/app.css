@@ -79,6 +79,7 @@
 
 	html {
 		scroll-behavior: smooth;
+		overflow-x: hidden;
 	}
 
 	body {
@@ -88,6 +89,7 @@
 		font-size: 1.125rem;
 		line-height: 1.75;
 		font-feature-settings: 'kern' 1, 'liga' 1;
+		overflow-x: hidden;
 	}
 
 	h1, h2, h3, h4 {
