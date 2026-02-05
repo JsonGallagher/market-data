@@ -423,7 +423,7 @@
 			{ id: 'median_price', label: 'Median Price' },
 			{ id: 'average_price', label: 'Average Price' },
 			{ id: 'sales_count', label: 'Sales Volume' },
-			{ id: 'active_listings', label: 'Active Listings' }
+			{ id: 'active_listings', label: 'Active Listings', subtitle: 'Current' }
 		];
 
 		return items.map((item) => {
@@ -661,7 +661,12 @@
 				{:else}
 					{#each pulseItems as item}
 						<div class="stat-card">
-							<p class="stat-label">{item.label}</p>
+							<p class="stat-label">
+								{item.label}
+								{#if item.subtitle}
+									<span class="text-[#707070] font-normal ml-1">({item.subtitle})</span>
+								{/if}
+							</p>
 							<p class="stat-value">
 								{item.current !== null ? formatValue(item.id, item.current) : '—'}
 							</p>
