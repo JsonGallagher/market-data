@@ -449,6 +449,9 @@
 	let copiedLink = $state<string | null>(null);
 	const origin = browser ? window.location.origin : '';
 
+	// Mobile menu state
+	let mobileMenuOpen = $state(false);
+
 	// Loading state for skeleton display during initial hydration
 	let isLoading = $state(!browser);
 
@@ -500,22 +503,22 @@
 	<title>Dashboard - Market Data</title>
 </svelte:head>
 
-<div class="min-h-screen bg-[#0c0c0c]">
+<div class="min-h-screen bg-[#0c0c0c] overflow-x-hidden">
 	<!-- Navigation -->
 	<nav class="sticky top-0 z-40 bg-gradient-to-r from-[#141414]/95 via-[#1a1a1a]/90 to-[#141414]/95 backdrop-blur-xl border-b border-[#d4a853]/10 shadow-lg shadow-black/20">
-		<div class="max-w-7xl mx-auto px-6 lg:px-8">
-			<div class="flex items-center justify-between h-20">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="flex items-center justify-between h-16 sm:h-20">
 				<!-- Logo -->
 				<a href="/" class="flex items-center gap-3 group">
-					<div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center shadow-lg shadow-[#d4a853]/10 group-hover:shadow-[#d4a853]/20 transition-shadow">
-						<span class="text-[#0a0a0a] text-xs font-bold tracking-tight">MD</span>
+					<div class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center shadow-lg shadow-[#d4a853]/10 group-hover:shadow-[#d4a853]/20 transition-shadow">
+						<span class="text-[#0a0a0a] text-[10px] sm:text-xs font-bold tracking-tight">MD</span>
 					</div>
 					<div class="hidden sm:block">
 						<span class="text-[#fafafa] text-sm font-medium tracking-wide">Market Data</span>
 					</div>
 				</a>
 
-				<!-- Center Navigation -->
+				<!-- Center Navigation (Desktop) -->
 				<div class="hidden md:flex items-center gap-8">
 					<a href="/dashboard" class="nav-link active">Dashboard</a>
 					<a href="/upload" class="nav-link">Import</a>
@@ -523,19 +526,65 @@
 				</div>
 
 				<!-- Right Side -->
-				<div class="flex items-center gap-4">
-					<a href="/upload" class="btn-primary">
+				<div class="flex items-center gap-2 sm:gap-4">
+					<a href="/upload" class="btn-primary !py-2 !px-3 sm:!py-3 sm:!px-6">
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
 						</svg>
 						<span class="hidden sm:inline">Add Data</span>
 					</a>
+					<!-- Mobile Menu Button -->
+					<button
+						type="button"
+						class="md:hidden p-2 text-[#a0a0a0] hover:text-[#fafafa] transition-colors"
+						onclick={() => mobileMenuOpen = !mobileMenuOpen}
+						aria-label="Toggle menu"
+					>
+						{#if mobileMenuOpen}
+							<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						{:else}
+							<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+							</svg>
+						{/if}
+					</button>
 				</div>
 			</div>
 		</div>
+
+		<!-- Mobile Menu Dropdown -->
+		{#if mobileMenuOpen}
+			<div class="md:hidden border-t border-[#252525] bg-[#141414]/98 backdrop-blur-xl">
+				<div class="px-4 py-3 space-y-1">
+					<a
+						href="/dashboard"
+						class="block px-4 py-3 text-sm font-medium text-[#d4a853] bg-[#d4a853]/10 rounded-lg"
+						onclick={() => mobileMenuOpen = false}
+					>
+						Dashboard
+					</a>
+					<a
+						href="/upload"
+						class="block px-4 py-3 text-sm font-medium text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#1a1a1a] rounded-lg transition-colors"
+						onclick={() => mobileMenuOpen = false}
+					>
+						Import Data
+					</a>
+					<a
+						href="/manual-entry"
+						class="block px-4 py-3 text-sm font-medium text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#1a1a1a] rounded-lg transition-colors"
+						onclick={() => mobileMenuOpen = false}
+					>
+						Manual Entry
+					</a>
+				</div>
+			</div>
+		{/if}
 	</nav>
 
-	<main class="max-w-7xl mx-auto px-6 lg:px-8 py-10">
+	<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
 		{#if !hasData}
 			<!-- Empty State -->
 			<div class="max-w-md mx-auto text-center py-24">
@@ -574,15 +623,15 @@
 			</div>
 		{:else}
 		<!-- Hero Section -->
-			<div class="mb-12">
-				<div class="flex items-center gap-3 mb-4">
-					<span class="section-label">Market Dashboard</span>
+			<div class="mb-8 sm:mb-12">
+				<div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
+					<span class="section-label text-[10px] sm:text-xs">Market Dashboard</span>
 					{#if marketClassification}
 						<span
-							class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider"
+							class="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-semibold uppercase tracking-wider"
 							style="background-color: {getConditionColor(marketClassification.condition)}20; color: {getConditionColor(marketClassification.condition)}; border: 1px solid {getConditionColor(marketClassification.condition)}40;"
 						>
-							<span class="w-2 h-2 rounded-full" style="background-color: {getConditionColor(marketClassification.condition)};"></span>
+							<span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full" style="background-color: {getConditionColor(marketClassification.condition)};"></span>
 							{getConditionLabel(marketClassification.condition)}
 						</span>
 					{/if}
@@ -596,13 +645,36 @@
 				</p>
 
 				<!-- Date Range Filter -->
-				<div class="flex flex-wrap items-center gap-4 mb-6">
-					<span class="text-sm text-[#909090] uppercase tracking-wider font-medium">Showing</span>
-					<div class="flex items-center gap-1 bg-[#111111] border border-[#252525] rounded-lg p-1">
+				<div class="mb-6">
+					<span class="text-xs sm:text-sm text-[#909090] uppercase tracking-wider font-medium block mb-3 sm:mb-0 sm:inline">Showing</span>
+					<!-- Mobile: full-width grid -->
+					<div class="grid grid-cols-6 gap-1 bg-[#111111] border border-[#252525] rounded-xl p-1.5 sm:hidden">
 						{#each filterOptions as opt}
 							<button
 								type="button"
-								class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200
+								class="py-2.5 text-xs font-semibold rounded-lg transition-all duration-200 text-center
+									{dateRange === opt.value
+										? 'bg-[#d4a853] text-[#0a0a0a]'
+										: 'text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#1a1a1a]'}"
+								onclick={() => handleRangeChange(opt.value)}
+							>
+								{opt.changeLabel === 'total' ? 'All' : opt.changeLabel}
+							</button>
+						{/each}
+						<DateRangePopover
+							isActive={dateRange === 'custom'}
+							startDate={customStartDate}
+							endDate={customEndDate}
+							onApply={handleCustomRangeApply}
+							onClear={handleCustomRangeClear}
+						/>
+					</div>
+					<!-- Desktop: inline flex -->
+					<div class="hidden sm:inline-flex items-center gap-1 bg-[#111111] border border-[#252525] rounded-lg p-1 sm:ml-4">
+						{#each filterOptions as opt}
+							<button
+								type="button"
+								class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 whitespace-nowrap
 									{dateRange === opt.value
 										? 'bg-[#d4a853] text-[#0a0a0a]'
 										: 'text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#1a1a1a]'}"
@@ -622,38 +694,32 @@
 					</div>
 				</div>
 
-				<div class="flex flex-wrap items-center gap-3 text-sm">
-					<span class="inline-flex items-center gap-2 px-4 py-2 bg-[#141414] border border-[#252525] rounded-full text-[#a0a0a0]">
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+					<span class="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-[#141414] border border-[#252525] rounded-full text-[#a0a0a0]">
+						<svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 						</svg>
-						{monthCount} months
+						{monthCount} <span class="hidden xs:inline">months</span><span class="xs:hidden">mo</span>
 					</span>
-					<span class="inline-flex items-center gap-2 px-4 py-2 bg-[#141414] border border-[#252525] rounded-full text-[#a0a0a0]">
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-						</svg>
-						{filteredMetrics.length} metrics
-					</span>
-					<span class="inline-flex items-center gap-2 px-4 py-2 bg-[#d4a853]/10 border border-[#d4a853]/30 rounded-full text-[#d4a853] font-medium">
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<span class="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-[#d4a853]/10 border border-[#d4a853]/30 rounded-full text-[#d4a853] font-medium">
+						<svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 						</svg>
-						Data through {latestLabel}
+						<span class="hidden sm:inline">Data through</span> {latestLabel}
 					</span>
 					{#if data.lastImport}
-						<span class="inline-flex items-center gap-2 px-4 py-2 bg-[#141414] border border-[#252525] rounded-full text-[#a0a0a0]">
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<span class="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-[#141414] border border-[#252525] rounded-full text-[#a0a0a0]">
+							<svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
-							Imported {formatLastImport(data.lastImport.last_imported_at)}
+							<span class="hidden sm:inline">Imported</span> {formatLastImport(data.lastImport.last_imported_at)}
 						</span>
 					{/if}
 				</div>
 			</div>
 
 			<!-- Key Metrics Grid -->
-			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-10">
+			<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-6 sm:mb-10">
 				{#if isLoading}
 					{#each Array(4) as _}
 						<SkeletonCard variant="metric" />
@@ -1069,16 +1135,16 @@
 	</main>
 
 	<!-- Footer -->
-	<footer class="border-t border-[#1a1a1a] mt-16">
-		<div class="max-w-7xl mx-auto px-6 lg:px-8 py-10">
-			<div class="flex flex-col md:flex-row items-center justify-between gap-4">
-				<div class="flex items-center gap-3">
-					<div class="w-7 h-7 rounded-md bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center">
-						<span class="text-[#0a0a0a] text-[10px] font-bold">MD</span>
+	<footer class="border-t border-[#1a1a1a] mt-10 sm:mt-16">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+			<div class="flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4">
+				<div class="flex items-center gap-2 sm:gap-3">
+					<div class="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center">
+						<span class="text-[#0a0a0a] text-[8px] sm:text-[10px] font-bold">MD</span>
 					</div>
-					<span class="text-[#808080] text-xs">Market Data</span>
+					<span class="text-[#808080] text-[10px] sm:text-xs">Market Data</span>
 				</div>
-				<p class="text-[#707070] text-xs">
+				<p class="text-[#707070] text-[10px] sm:text-xs">
 					© {new Date().getFullYear()} Market Data. All rights reserved.
 				</p>
 			</div>

@@ -66,21 +66,21 @@
 	<!-- Trigger Button -->
 	<button
 		type="button"
-		class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200
+		class="flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2 text-xs sm:text-sm font-medium rounded-md sm:rounded-md transition-all duration-200 w-full sm:w-auto
 			{isActive
 				? 'bg-[#d4a853] text-[#0a0a0a]'
 				: 'text-[#a0a0a0] hover:text-[#fafafa] hover:bg-[#1a1a1a]'}"
 		onclick={() => isOpen = !isOpen}
 	>
-		<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 		</svg>
-		<span>{displayLabel}</span>
+		<span class="hidden sm:inline">{displayLabel}</span>
 	</button>
 
 	<!-- Popover -->
 	{#if isOpen}
-		<div class="absolute top-full left-0 mt-2 z-50 bg-[#111111] border border-[#252525] rounded-lg shadow-xl p-4 min-w-[280px]">
+		<div class="fixed sm:absolute inset-x-4 sm:inset-x-auto top-1/3 sm:top-full sm:right-0 sm:left-auto sm:mt-2 z-50 bg-[#111111] border border-[#252525] rounded-xl sm:rounded-lg shadow-2xl p-5 sm:p-4 sm:min-w-[280px]">
 			<h3 class="text-sm font-semibold text-[#fafafa] mb-4">Custom Date Range</h3>
 
 			<div class="space-y-3">
