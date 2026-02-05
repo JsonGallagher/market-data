@@ -34,7 +34,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Deploy to Cloudflare Pages
-        run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name=market-data-35l
+        run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name=market-data
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
