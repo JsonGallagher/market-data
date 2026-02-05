@@ -12,11 +12,6 @@ A modern real estate analytics dashboard for agents to visualize market trends, 
 - **Market Condition Badge**: Visual indicator showing buyer's, seller's, or balanced market conditions
 - **Chart Export**: Expand any chart and export as high-resolution PNG for presentations and reports
 
-### Chart Intelligence
-- **Fed Rate Overlay**: Visualize Federal Reserve interest rate changes directly on your price charts to understand macro market impacts
-- **Inflection Point Detection**: Automatic identification of market peaks, troughs, acceleration, and deceleration points
-- **Custom Annotations**: Add your own annotations to mark local events, market milestones, or noteworthy data points
-
 ### AI-Powered Insights
 - **GPT-4o-mini Integration**: Automatically generates market insights from your data
 - **Smart Classification**: AI determines market conditions with confidence levels
@@ -182,26 +177,20 @@ The app will be available at `http://localhost:5173`.
 ```
 src/
 ├── lib/
-│   ├── annotations/
-│   │   └── annotation-utils.ts   # Chart annotation helpers
 │   ├── charts/
 │   │   ├── TrendChart.svelte     # Single metric area chart with export
 │   │   ├── MultiTrendChart.svelte # Multi-series comparison chart
 │   │   ├── MetricCard.svelte     # Stat card component
 │   │   ├── Modal.svelte          # Reusable modal component
-│   │   ├── AnnotationModal.svelte # Custom annotation editor
 │   │   └── chartExport.ts        # PNG export utilities
 │   ├── components/
 │   │   ├── animations/           # Motion components (FadeIn, CountUp, etc.)
 │   │   ├── DateRangePopover.svelte # Custom date range picker
 │   │   └── SkeletonCard.svelte   # Loading skeleton states
-│   ├── data/
-│   │   └── fed-rates.ts          # Federal Reserve rate history
 │   ├── extractors/
 │   │   └── excel.ts              # Excel/CSV parsing logic
 │   ├── insights/
 │   │   ├── enhanced-insights.ts  # Rule-based insight generation
-│   │   ├── inflection-detector.ts # Peak/trough detection algorithms
 │   │   ├── market-conditions.ts  # Market classification logic
 │   │   └── seasonal-patterns.ts  # Seasonal comparison data
 │   ├── database.types.ts         # Supabase type definitions
