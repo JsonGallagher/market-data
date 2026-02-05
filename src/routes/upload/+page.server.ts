@@ -208,8 +208,6 @@ function getCutoffDate(range: DateRange): Date | null {
 }
 
 async function generateAndCacheInsights(supabaseAdmin: any) {
-	console.log('[AI Insights] Starting generation...');
-
 	// Fetch all data for insights generation
 	const { data: allMetricsData } = await supabaseAdmin
 		.from('metrics')
@@ -218,11 +216,8 @@ async function generateAndCacheInsights(supabaseAdmin: any) {
 		.order('recorded_date', { ascending: false });
 
 	if (!allMetricsData || allMetricsData.length === 0) {
-		console.log('[AI Insights] No metrics data found');
 		return;
 	}
-
-	console.log(`[AI Insights] Found ${allMetricsData.length} metrics`);
 
 	// Generate insights only for 12 months - this provides the best balance of
 	// recency and trend data for actionable real estate insights
@@ -293,9 +288,6 @@ async function generateAndCacheInsights(supabaseAdmin: any) {
 
 	const result = await generateAIInsights(summary);
 
-	console.log(`[AI Insights] Generated ${result.insights.length} insights`);
-	console.log('[AI Insights] targetAudience values:', result.insights.map(i => i.targetAudience));
-
 	if (result.insights.length > 0 || result.marketCondition) {
 		// Cache insights for the 12m range
 		const { error: upsertError } = await supabaseAdmin
@@ -310,8 +302,6 @@ async function generateAndCacheInsights(supabaseAdmin: any) {
 
 		if (upsertError) {
 			console.error('[AI Insights] Failed to cache:', upsertError);
-		} else {
-			console.log('[AI Insights] Successfully cached insights');
 		}
 	}
 }

@@ -40,6 +40,7 @@
 	// Track series data for reactivity
 	const seriesData = $derived(series.map(s => s.values));
 
+	// Use CSS variable values as defaults - these match --color-primary, --color-chart-blue, --color-success, --color-chart-purple
 	const defaultColors = ['#d4a853', '#5b8def', '#34d399', '#a78bfa'];
 
 	function formatYAxis(value: number): string {

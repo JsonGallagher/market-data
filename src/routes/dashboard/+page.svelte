@@ -10,6 +10,7 @@
 	import { getConditionLabel, getConditionColor } from '$lib/insights/market-conditions';
 	import { FadeIn, StaggerContainer, StaggerItem, CountUp, ScaleOnHover } from '$lib/components/animations';
 	import DateRangePopover from '$lib/components/DateRangePopover.svelte';
+	import SkeletonCard from '$lib/components/SkeletonCard.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -32,6 +33,13 @@
 	let dateRange = $state<DateRange>((data.range as DateRange) || '12m');
 	let customStartDate = $state<string | null>(null);
 	let customEndDate = $state<string | null>(null);
+
+	// Mark as loaded once browser is ready
+	$effect(() => {
+		if (browser) {
+			isLoading = false;
+		}
+	});
 
 	// On mount, check URL params first, then localStorage for saved preference
 	$effect(() => {
@@ -441,6 +449,9 @@
 	let copiedLink = $state<string | null>(null);
 	const origin = browser ? window.location.origin : '';
 
+	// Loading state for skeleton display during initial hydration
+	let isLoading = $state(!browser);
+
 	// Enhanced insights
 	const enhancedInsights = $derived.by(() => {
 		const latest = latestDate;
@@ -643,37 +654,56 @@
 
 			<!-- Key Metrics Grid -->
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-10">
-				{#each pulseItems as item}
-					<div class="stat-card">
-						<p class="stat-label">{item.label}</p>
-						<p class="stat-value">
-							{item.current !== null ? formatValue(item.id, item.current) : '—'}
-						</p>
-						{#if item.change !== null}
-							<span class="stat-change {item.change >= 0 ? 'positive' : 'negative'}">
-								{#if item.change >= 0}
-									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
-									</svg>
-								{:else}
-									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-									</svg>
-								{/if}
-								{Math.abs(item.change).toFixed(1)}% {changeLabel}
-							</span>
-						{/if}
-						{#if item.id === 'sales_count' && salesYtd > 0}
-							<div class="text-xs text-[#707070] mt-1">
-								YTD: {salesYtd.toLocaleString()}
-							</div>
-						{/if}
-					</div>
-				{/each}
+				{#if isLoading}
+					{#each Array(4) as _}
+						<SkeletonCard variant="metric" />
+					{/each}
+				{:else}
+					{#each pulseItems as item}
+						<div class="stat-card">
+							<p class="stat-label">{item.label}</p>
+							<p class="stat-value">
+								{item.current !== null ? formatValue(item.id, item.current) : '—'}
+							</p>
+							{#if item.change !== null}
+								<span class="stat-change {item.change >= 0 ? 'positive' : 'negative'}">
+									{#if item.change >= 0}
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
+										</svg>
+									{:else}
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+										</svg>
+									{/if}
+									{Math.abs(item.change).toFixed(1)}% {changeLabel}
+								</span>
+							{/if}
+							{#if item.id === 'sales_count' && salesYtd > 0}
+								<div class="text-xs text-[#707070] mt-1">
+									YTD: {salesYtd.toLocaleString()}
+								</div>
+							{/if}
+						</div>
+					{/each}
+				{/if}
 			</div>
 
 			<!-- AI-Powered Insights -->
-			{#if data.aiInsights && data.aiInsights.length > 0}
+			{#if isLoading}
+				<div class="lux-card p-8 mb-10">
+					<div class="flex items-center justify-between mb-2">
+						<div class="skeleton skeleton-text w-40 h-7"></div>
+						<div class="skeleton skeleton-text w-28 h-4"></div>
+					</div>
+					<div class="skeleton skeleton-text w-72 h-4 mb-8"></div>
+					<div class="grid md:grid-cols-2 gap-5">
+						{#each Array(4) as _}
+							<SkeletonCard variant="insight" />
+						{/each}
+					</div>
+				</div>
+			{:else if data.aiInsights && data.aiInsights.length > 0}
 				<FadeIn y={30} duration={0.6}>
 					<div class="lux-card p-8 mb-10">
 						<div class="flex items-center justify-between mb-2">
@@ -782,20 +812,28 @@
 						<h2 class="text-2xl text-[#fafafa]">Market Trends</h2>
 						<span class="h-px flex-1 bg-gradient-to-r from-[#303030] to-transparent"></span>
 					</div>
-					<StaggerContainer class="grid md:grid-cols-2 gap-4" staggerDelay={0.08}>
-						{#each metricOrder as typeId}
-							{#if metricsByType[typeId] && metricsByType[typeId].length > 0}
-								<StaggerItem>
-									<TrendChart
-										data={metricsByType[typeId]}
-										metricTypeId={typeId}
-										title={getDisplayName(typeId)}
-										yAxisLabel={axisLabels[typeId]?.y || ''}
-									/>
-								</StaggerItem>
-							{/if}
-						{/each}
-					</StaggerContainer>
+					{#if isLoading}
+						<div class="grid md:grid-cols-2 gap-4">
+							{#each Array(4) as _}
+								<SkeletonCard variant="chart" />
+							{/each}
+						</div>
+					{:else}
+						<StaggerContainer class="grid md:grid-cols-2 gap-4" staggerDelay={0.08}>
+							{#each metricOrder as typeId}
+								{#if metricsByType[typeId] && metricsByType[typeId].length > 0}
+									<StaggerItem>
+										<TrendChart
+											data={metricsByType[typeId]}
+											metricTypeId={typeId}
+											title={getDisplayName(typeId)}
+											yAxisLabel={axisLabels[typeId]?.y || ''}
+										/>
+									</StaggerItem>
+								{/if}
+							{/each}
+						</StaggerContainer>
+					{/if}
 				</div>
 			</FadeIn>
 

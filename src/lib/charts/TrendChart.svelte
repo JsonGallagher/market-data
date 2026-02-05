@@ -277,7 +277,7 @@
 					</span>
 					{#if percentChange !== null}
 						<span class="inline-flex items-center gap-1 text-sm font-medium px-2.5 py-1 rounded-full
-							{percentChange >= 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-red-400 bg-red-400/10'}">
+							{percentChange >= 0 ? 'text-success bg-success/10' : 'text-error bg-error/10'}">
 							{#if percentChange >= 0}
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
@@ -562,11 +562,11 @@
 	}
 
 	.export-stat-value-change.positive {
-		color: #34d399;
+		color: var(--color-success, #34d399);
 	}
 
 	.export-stat-value-change.negative {
-		color: #f87171;
+		color: var(--color-error, #f87171);
 	}
 
 	.export-footer {
