@@ -14,7 +14,7 @@
 	<div class="w-full max-w-md">
 		<div class="text-center mb-10">
 			<div class="w-16 h-16 rounded-full border border-[#c9a962]/40 flex items-center justify-center mx-auto mb-6">
-				<span class="text-[#c9a962] text-xl font-medium tracking-wider">MD</span>
+				<span class="text-[#c9a962] text-xl font-medium tracking-wider translate-x-[1px]">MD</span>
 			</div>
 			<h1 class="text-3xl text-white mb-2">Welcome back</h1>
 			<p class="text-[#888888]">Enter your password to continue</p>

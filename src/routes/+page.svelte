@@ -16,7 +16,7 @@
 			<div class="flex items-center justify-between h-20">
 				<a href="/" class="flex items-center gap-3 group">
 					<div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center shadow-lg shadow-[#d4a853]/20 group-hover:shadow-[#d4a853]/30 transition-shadow">
-						<span class="text-[#0a0a0a] text-xs font-bold tracking-tight">MD</span>
+						<span class="text-[#0a0a0a] text-xs font-bold tracking-tight translate-x-[1px]">MD</span>
 					</div>
 					<span class="text-[#fafafa] text-sm font-medium tracking-wide">Market Data</span>
 				</a>
@@ -111,7 +111,7 @@
 			<div class="flex flex-col md:flex-row items-center justify-between gap-4">
 				<div class="flex items-center gap-3">
 					<div class="w-6 h-6 rounded-md bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center">
-						<span class="text-[#0a0a0a] text-[8px] font-bold">MD</span>
+						<span class="text-[#0a0a0a] text-[8px] font-bold translate-x-[1px]">MD</span>
 					</div>
 					<span class="text-[#505050] text-xs">Market Data</span>
 				</div>

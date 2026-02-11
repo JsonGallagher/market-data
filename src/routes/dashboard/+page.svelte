@@ -511,7 +511,7 @@
 				<!-- Logo -->
 				<a href="/" class="flex items-center gap-3 group">
 					<div class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center shadow-lg shadow-[#d4a853]/10 group-hover:shadow-[#d4a853]/20 transition-shadow">
-						<span class="text-[#0a0a0a] text-[10px] sm:text-xs font-bold tracking-tight">MD</span>
+						<span class="text-[#0a0a0a] text-[10px] sm:text-xs font-bold tracking-tight translate-x-[1px]">MD</span>
 					</div>
 					<div class="hidden sm:block">
 						<span class="text-[#fafafa] text-sm font-medium tracking-wide">Market Data</span>
@@ -1140,7 +1140,7 @@
 			<div class="flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4">
 				<div class="flex items-center gap-2 sm:gap-3">
 					<div class="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-gradient-to-br from-[#d4a853] to-[#b8903e] flex items-center justify-center">
-						<span class="text-[#0a0a0a] text-[8px] sm:text-[10px] font-bold">MD</span>
+						<span class="text-[#0a0a0a] text-[8px] sm:text-[10px] font-bold translate-x-[1px]">MD</span>
 					</div>
 					<span class="text-[#808080] text-[10px] sm:text-xs">Market Data</span>
 				</div>

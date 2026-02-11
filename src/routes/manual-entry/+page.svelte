@@ -33,7 +33,7 @@
 			<div class="flex items-center justify-between h-20">
 				<a href="/" class="flex items-center gap-3">
 					<div class="w-10 h-10 rounded-full border border-[#c9a962]/40 flex items-center justify-center">
-						<span class="text-[#c9a962] text-sm font-medium tracking-wider">MD</span>
+						<span class="text-[#c9a962] text-sm font-medium tracking-wider translate-x-[1px]">MD</span>
 					</div>
 					<span class="text-white text-lg font-medium tracking-wide hidden sm:block">MARKET DATA</span>
 				</a>
